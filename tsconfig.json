@@ -1,31 +1,18 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-
     "module": "CommonJS",
-
     "moduleResolution": "Bundler",
-
-    "rootDir": "./src",
-
+    "rootDir": "./",
     "outDir": "./dist",
-
     "strict": true,
-
     "noImplicitAny": true,
-
     "esModuleInterop": true,
-
     "forceConsistentCasingInFileNames": true,
-
     "skipLibCheck": true,
-
     "resolveJsonModule": true,
-
     "types": ["node"],
-
     "baseUrl": "./src",
-
     "paths": {
       "@core/*": ["core/*"],
       "@modules/*": ["modules/*"],
@@ -33,11 +20,8 @@
       "@infra/*": ["infra/*"],
       "@config/*": ["config/*"]
     },
-
     "ignoreDeprecations": "6.0"
   },
-
-  "include": ["src"],
-
+  "include": ["src", "prisma/**/*.ts", "prisma.config.ts"],
   "exclude": ["node_modules", "dist"]
 }
