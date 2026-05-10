@@ -1,8 +1,10 @@
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import fastify, { type FastifyInstance } from 'fastify';
 
+import { env } from './config/env';
 import { loggerConfig } from './config/logger';
 import { errorHandler } from './core/middlewares/error-handler';
 import { registerRoutes } from './modules/routes';
@@ -21,6 +23,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
+  });
+
+  await app.register(jwt, {
+    secret: env.jwtSecret,
   });
 
   app.setErrorHandler(errorHandler);
