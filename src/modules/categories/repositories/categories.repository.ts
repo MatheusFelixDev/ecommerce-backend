@@ -8,10 +8,22 @@ interface CreateCategoryData {
   description?: string;
 }
 
+interface UpdateCategoryData {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+}
+
 export class CategoriesRepository {
-  async findBySlug(
-    slug: string,
-  ): Promise<Category | null> {
+  async findById(id: string): Promise<Category | null> {
+    return prisma.category.findUnique({
+      where: {
+        id,
+      },
+    });
+  }
+
+  async findBySlug(slug: string): Promise<Category | null> {
     return prisma.category.findUnique({
       where: {
         slug,
@@ -19,11 +31,43 @@ export class CategoriesRepository {
     });
   }
 
-  async create(
-    data: CreateCategoryData,
-  ): Promise<Category> {
+  async findMany(): Promise<Category[]> {
+    return prisma.category.findMany({
+      where: {
+        isActive: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+  }
+
+  async create(data: CreateCategoryData): Promise<Category> {
     return prisma.category.create({
       data,
+    });
+  }
+
+  async update(
+    id: string,
+    data: UpdateCategoryData,
+  ): Promise<Category> {
+    return prisma.category.update({
+      where: {
+        id,
+      },
+      data,
+    });
+  }
+
+  async softDelete(id: string): Promise<Category> {
+    return prisma.category.update({
+      where: {
+        id,
+      },
+      data: {
+        isActive: false,
+      },
     });
   }
 }
