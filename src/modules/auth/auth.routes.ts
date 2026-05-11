@@ -4,17 +4,21 @@ import { UserRole } from '../../generated/prisma/client';
 import { authenticate } from '../../core/middlewares/authenticate';
 import { authorize } from '../../core/middlewares/authorize';
 import { adminCheckController } from './controllers/admin-check.controller';
+import { forgotPasswordController } from './controllers/forgot-password.controller';
 import { getAuthenticatedUserController } from './controllers/get-authenticated-user.controller';
 import { loginUserController } from './controllers/login-user.controller';
 import { logoutUserController } from './controllers/logout-user.controller';
 import { refreshTokenController } from './controllers/refresh-token.controller';
 import { registerUserController } from './controllers/register-user.controller';
+import { resetPasswordController } from './controllers/reset-password.controller';
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post('/register', registerUserController);
   app.post('/login', loginUserController);
   app.post('/refresh', refreshTokenController);
   app.post('/logout', logoutUserController);
+  app.post('/forgot-password', forgotPasswordController);
+  app.post('/reset-password', resetPasswordController);
 
   app.get(
     '/me',
