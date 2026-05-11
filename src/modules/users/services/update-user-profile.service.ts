@@ -17,6 +17,7 @@ export class UpdateUserProfileService {
 
     const updatedUser = await usersProfileRepository.update(userId, {
       name: data.name,
+      phone: data.phone,
     });
 
     return mapUserProfile(updatedUser);
