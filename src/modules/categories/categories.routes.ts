@@ -7,6 +7,7 @@ import { createCategoryController } from './controllers/create-category.controll
 import { deleteCategoryController } from './controllers/delete-category.controller';
 import { getCategoryBySlugController } from './controllers/get-category-by-slug.controller';
 import { listCategoriesController } from './controllers/list-categories.controller';
+import { restoreCategoryController } from './controllers/restore-category.controller';
 import { updateCategoryController } from './controllers/update-category.controller';
 
 export async function categoriesRoutes(
@@ -36,6 +37,17 @@ export async function categoriesRoutes(
       ],
     },
     updateCategoryController,
+  );
+
+  app.patch(
+    '/:id/restore',
+    {
+      preHandler: [
+        authenticate,
+        authorize(['ADMIN']),
+      ],
+    },
+    restoreCategoryController,
   );
 
   app.delete(

@@ -70,6 +70,17 @@ export class CategoriesRepository {
       },
     });
   }
+
+  async restore(id: string): Promise<Category> {
+    return prisma.category.update({
+      where: {
+        id,
+      },
+      data: {
+        isActive: true,
+      },
+    });
+  }
 }
 
 export const categoriesRepository =
