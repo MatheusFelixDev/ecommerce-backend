@@ -200,6 +200,71 @@ export class ProductsRepository {
     };
   }
 
+  async findPublicBySlug(
+    slug: string,
+  ): Promise<ProductWithRelations | null> {
+    return prisma.product.findFirst({
+      where: {
+        slug,
+        isActive: true,
+        status: 'ACTIVE',
+        category: {
+          isActive: true,
+        },
+      },
+      include: {
+        category: true,
+        images: {
+          orderBy: [
+            {
+              position: 'asc',
+            },
+            {
+              createdAt: 'asc',
+            },
+          ],
+        },
+      },
+    });
+  }
+
+  async findRelatedProducts(params: {
+    productId: string;
+    categoryId: string;
+    limit: number;
+  }): Promise<ProductWithRelations[]> {
+    return prisma.product.findMany({
+      where: {
+        id: {
+          not: params.productId,
+        },
+        categoryId: params.categoryId,
+        isActive: true,
+        status: 'ACTIVE',
+        category: {
+          isActive: true,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: params.limit,
+      include: {
+        category: true,
+        images: {
+          orderBy: [
+            {
+              position: 'asc',
+            },
+            {
+              createdAt: 'asc',
+            },
+          ],
+        },
+      },
+    });
+  }
+
   async create(
     data: CreateProductData,
   ): Promise<ProductWithRelations> {
