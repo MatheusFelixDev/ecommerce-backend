@@ -10,7 +10,18 @@ export class UsersProfileRepository {
     });
   }
 
-  async update(userId: string, data: Prisma.UserUpdateInput): Promise<User> {
+  async findByEmail(email: string): Promise<User | null> {
+    return prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+  }
+
+  async update(
+    userId: string,
+    data: Prisma.UserUpdateInput,
+  ): Promise<User> {
     return prisma.user.update({
       where: {
         id: userId,
@@ -18,6 +29,21 @@ export class UsersProfileRepository {
       data,
     });
   }
+
+  async updateEmail(
+    userId: string,
+    email: string,
+  ): Promise<User> {
+    return prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        email,
+      },
+    });
+  }
 }
 
-export const usersProfileRepository = new UsersProfileRepository();
+export const usersProfileRepository =
+  new UsersProfileRepository();
