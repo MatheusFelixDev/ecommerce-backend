@@ -361,6 +361,30 @@ export class ProductsRepository {
     });
   }
 
+  async restore(id: string): Promise<ProductWithRelations> {
+    return prisma.product.update({
+      where: {
+        id,
+      },
+      data: {
+        isActive: true,
+      },
+      include: {
+        category: true,
+        images: {
+          orderBy: [
+            {
+              position: 'asc',
+            },
+            {
+              createdAt: 'asc',
+            },
+          ],
+        },
+      },
+    });
+  }
+
   async create(
     data: CreateProductData,
   ): Promise<ProductWithRelations> {

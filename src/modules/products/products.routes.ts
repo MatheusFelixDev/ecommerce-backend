@@ -7,6 +7,7 @@ import { createProductController } from './controllers/create-product.controller
 import { deleteProductController } from './controllers/delete-product.controller';
 import { getProductBySlugController } from './controllers/get-product-by-slug.controller';
 import { listProductsController } from './controllers/list-products.controller';
+import { restoreProductController } from './controllers/restore-product.controller';
 import { updateProductController } from './controllers/update-product.controller';
 
 export async function productsRoutes(
@@ -25,6 +26,17 @@ export async function productsRoutes(
       ],
     },
     deleteProductController,
+  );
+
+  app.patch(
+    '/:id/restore',
+    {
+      preHandler: [
+        authenticate,
+        authorize(['ADMIN']),
+      ],
+    },
+    restoreProductController,
   );
 
   app.patch(
