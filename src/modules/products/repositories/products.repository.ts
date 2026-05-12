@@ -28,6 +28,26 @@ interface CreateProductData {
   images: CreateProductImageData[];
 }
 
+interface UpdateProductImageData {
+  url: string;
+  altText?: string;
+  position: number;
+  isMain: boolean;
+}
+
+interface UpdateProductData {
+  categoryId?: string;
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  sku?: string;
+  priceInCents?: number;
+  discountInCents?: number;
+  stock?: number;
+  status?: ProductStatus;
+  images?: UpdateProductImageData[];
+}
+
 export interface ListProductsFilters {
   page: number;
   perPage: number;
@@ -262,6 +282,58 @@ export class ProductsRepository {
           ],
         },
       },
+    });
+  }
+
+  async update(
+    id: string,
+    data: UpdateProductData,
+  ): Promise<ProductWithRelations> {
+    return prisma.$transaction(async (transaction) => {
+      if (data.images !== undefined) {
+        await transaction.productImage.deleteMany({
+          where: {
+            productId: id,
+          },
+        });
+      }
+
+      return transaction.product.update({
+        where: {
+          id,
+        },
+        data: {
+          categoryId: data.categoryId,
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          sku: data.sku,
+          priceInCents: data.priceInCents,
+          discountInCents: data.discountInCents,
+          stock: data.stock,
+          status: data.status,
+          ...(data.images !== undefined
+            ? {
+                images: {
+                  create: data.images,
+                },
+              }
+            : {}),
+        },
+        include: {
+          category: true,
+          images: {
+            orderBy: [
+              {
+                position: 'asc',
+              },
+              {
+                createdAt: 'asc',
+              },
+            ],
+          },
+        },
+      });
     });
   }
 
