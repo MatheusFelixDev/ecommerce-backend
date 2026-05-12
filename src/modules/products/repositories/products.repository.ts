@@ -1,5 +1,6 @@
 import type {
   Category,
+  Prisma,
   Product,
   ProductImage,
   ProductStatus,
@@ -25,6 +26,24 @@ interface CreateProductData {
   stock: number;
   status: ProductStatus;
   images: CreateProductImageData[];
+}
+
+export interface ListProductsFilters {
+  page: number;
+  perPage: number;
+  search?: string;
+  categoryId?: string;
+  categorySlug?: string;
+  minPriceInCents?: number;
+  maxPriceInCents?: number;
+  inStock?: boolean;
+  sortBy: 'recent' | 'price' | 'best_selling';
+  sortOrder: 'asc' | 'desc';
+}
+
+export interface ListProductsResult {
+  products: ProductWithRelations[];
+  total: number;
 }
 
 export interface ProductWithRelations extends Product {
@@ -55,6 +74,130 @@ export class ProductsRepository {
         sku,
       },
     });
+  }
+
+  async findMany(
+    filters: ListProductsFilters,
+  ): Promise<ListProductsResult> {
+    const where: Prisma.ProductWhereInput = {
+      isActive: true,
+      status: 'ACTIVE',
+      category: {
+        isActive: true,
+      },
+    };
+
+    if (filters.search) {
+      where.OR = [
+        {
+          name: {
+            contains: filters.search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          sku: {
+            contains: filters.search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          description: {
+            contains: filters.search,
+            mode: 'insensitive',
+          },
+        },
+      ];
+    }
+
+    if (filters.categoryId || filters.categorySlug) {
+      where.category = {
+        isActive: true,
+        ...(filters.categoryId
+          ? {
+              id: filters.categoryId,
+            }
+          : {}),
+        ...(filters.categorySlug
+          ? {
+              slug: filters.categorySlug,
+            }
+          : {}),
+      };
+    }
+
+    if (
+      filters.minPriceInCents !== undefined ||
+      filters.maxPriceInCents !== undefined
+    ) {
+      where.priceInCents = {
+        ...(filters.minPriceInCents !== undefined
+          ? {
+              gte: filters.minPriceInCents,
+            }
+          : {}),
+        ...(filters.maxPriceInCents !== undefined
+          ? {
+              lte: filters.maxPriceInCents,
+            }
+          : {}),
+      };
+    }
+
+    if (filters.inStock !== undefined) {
+      where.stock = filters.inStock
+        ? {
+            gt: 0,
+          }
+        : {
+            equals: 0,
+          };
+    }
+
+    const orderBy: Prisma.ProductOrderByWithRelationInput =
+      filters.sortBy === 'price'
+        ? {
+            priceInCents: filters.sortOrder,
+          }
+        : filters.sortBy === 'best_selling'
+          ? {
+              salesCount: filters.sortOrder,
+            }
+          : {
+              createdAt: filters.sortOrder,
+            };
+
+    const skip = (filters.page - 1) * filters.perPage;
+
+    const [products, total] = await prisma.$transaction([
+      prisma.product.findMany({
+        where,
+        orderBy,
+        skip,
+        take: filters.perPage,
+        include: {
+          category: true,
+          images: {
+            orderBy: [
+              {
+                position: 'asc',
+              },
+              {
+                createdAt: 'asc',
+              },
+            ],
+          },
+        },
+      }),
+      prisma.product.count({
+        where,
+      }),
+    ]);
+
+    return {
+      products,
+      total,
+    };
   }
 
   async create(
