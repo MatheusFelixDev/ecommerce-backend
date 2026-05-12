@@ -4,6 +4,7 @@ import { authenticate } from '../../core/middlewares/authenticate';
 import { authorize } from '../../core/middlewares/authorize';
 
 import { createProductController } from './controllers/create-product.controller';
+import { deleteProductController } from './controllers/delete-product.controller';
 import { getProductBySlugController } from './controllers/get-product-by-slug.controller';
 import { listProductsController } from './controllers/list-products.controller';
 import { updateProductController } from './controllers/update-product.controller';
@@ -14,6 +15,17 @@ export async function productsRoutes(
   app.get('/', listProductsController);
 
   app.get('/:slug', getProductBySlugController);
+
+  app.delete(
+    '/:id',
+    {
+      preHandler: [
+        authenticate,
+        authorize(['ADMIN']),
+      ],
+    },
+    deleteProductController,
+  );
 
   app.patch(
     '/:id',

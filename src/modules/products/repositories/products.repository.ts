@@ -337,6 +337,30 @@ export class ProductsRepository {
     });
   }
 
+  async softDelete(id: string): Promise<ProductWithRelations> {
+    return prisma.product.update({
+      where: {
+        id,
+      },
+      data: {
+        isActive: false,
+      },
+      include: {
+        category: true,
+        images: {
+          orderBy: [
+            {
+              position: 'asc',
+            },
+            {
+              createdAt: 'asc',
+            },
+          ],
+        },
+      },
+    });
+  }
+
   async create(
     data: CreateProductData,
   ): Promise<ProductWithRelations> {
