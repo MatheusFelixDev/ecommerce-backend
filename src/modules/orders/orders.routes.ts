@@ -1,5 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 
-export async function ordersRoutes(_app: FastifyInstance): Promise<void> {
-  void _app;
+import { authenticate } from '../../core/middlewares/authenticate';
+
+import { createOrderController } from './controllers/create-order.controller';
+
+export async function ordersRoutes(
+  app: FastifyInstance,
+): Promise<void> {
+  app.post(
+    '/',
+    {
+      preHandler: [authenticate],
+    },
+    createOrderController,
+  );
 }
