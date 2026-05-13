@@ -4,6 +4,7 @@ import type {
   Category,
   Order,
   OrderItem,
+  OrderStatus,
   Prisma,
   Product,
   ProductImage,
@@ -44,6 +45,18 @@ interface CreateOrderItemData {
   subtotalInCents: number;
   discountInCents: number;
   totalInCents: number;
+}
+
+interface ListOrdersFilters {
+  userId: string;
+  page: number;
+  perPage: number;
+  status?: OrderStatus;
+}
+
+interface ListOrdersResult {
+  orders: Order[];
+  total: number;
 }
 
 interface CreateOrderData {
@@ -145,6 +158,40 @@ export class OrdersRepository {
     });
 
     return result.count;
+  }
+
+  async findManyByUserId(
+    filters: ListOrdersFilters,
+  ): Promise<ListOrdersResult> {
+    const where: Prisma.OrderWhereInput = {
+      userId: filters.userId,
+      ...(filters.status
+        ? {
+            status: filters.status,
+          }
+        : {}),
+    };
+
+    const skip = (filters.page - 1) * filters.perPage;
+
+    const [orders, total] = await prisma.$transaction([
+      prisma.order.findMany({
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: filters.perPage,
+      }),
+      prisma.order.count({
+        where,
+      }),
+    ]);
+
+    return {
+      orders,
+      total,
+    };
   }
 
   async create(

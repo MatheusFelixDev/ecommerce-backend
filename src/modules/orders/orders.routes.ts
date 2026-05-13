@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { authenticate } from '../../core/middlewares/authenticate';
 
 import { createOrderController } from './controllers/create-order.controller';
+import { listOrdersController } from './controllers/list-orders.controller';
 
 export async function ordersRoutes(
   app: FastifyInstance,
@@ -13,5 +14,13 @@ export async function ordersRoutes(
       preHandler: [authenticate],
     },
     createOrderController,
+  );
+
+  app.get(
+    '/',
+    {
+      preHandler: [authenticate],
+    },
+    listOrdersController,
   );
 }
