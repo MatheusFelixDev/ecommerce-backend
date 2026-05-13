@@ -68,6 +68,35 @@ export class CartRepository {
     });
   }
 
+  async findByIdAndUserId(params: {
+    id: string;
+    userId: string;
+  }): Promise<CartItemWithProduct | null> {
+    return prisma.cartItem.findFirst({
+      where: {
+        id: params.id,
+        userId: params.userId,
+      },
+      include: {
+        product: {
+          include: {
+            category: true,
+            images: {
+              orderBy: [
+                {
+                  position: 'asc',
+                },
+                {
+                  createdAt: 'asc',
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+  }
+
   async findManyByUserId(
     userId: string,
   ): Promise<CartItemWithProduct[]> {
