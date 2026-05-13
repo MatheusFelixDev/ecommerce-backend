@@ -18,6 +18,23 @@ enum ProductStatus {
   INACTIVE
 }
 
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELED
+}
+
 model User {
   id                  String               @id @default(uuid())
   name                String
@@ -33,6 +50,7 @@ model User {
   emailChangeTokens   EmailChangeToken[]
   addresses           Address[]
   cartItems           CartItem[]
+  orders              Order[]
 
   @@map("users")
 }
@@ -82,9 +100,10 @@ model Product {
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
-  category  Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  images    ProductImage[]
-  cartItems CartItem[]
+  category   Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images     ProductImage[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
 
   @@index([categoryId])
   @@index([categoryId, isActive])
@@ -130,6 +149,70 @@ model CartItem {
   @@index([userId])
   @@index([productId])
   @@map("cart_items")
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  addressId       String        @map("address_id")
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING) @map("payment_status")
+  itemsCount      Int           @map("items_count")
+  totalQuantity   Int           @map("total_quantity")
+  subtotalInCents Int           @map("subtotal_in_cents")
+  discountInCents Int           @map("discount_in_cents")
+  totalInCents    Int           @map("total_in_cents")
+
+  addressZipCode      String  @map("address_zip_code")
+  addressStreet       String  @map("address_street")
+  addressNumber       String  @map("address_number")
+  addressComplement   String? @map("address_complement")
+  addressNeighborhood String  @map("address_neighborhood")
+  addressCity         String  @map("address_city")
+  addressState        String  @map("address_state")
+  addressCountry      String  @map("address_country")
+  recipientName       String? @map("recipient_name")
+  recipientPhone      String? @map("recipient_phone")
+
+  canceledAt DateTime? @map("canceled_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  address Address     @relation(fields: [addressId], references: [id], onDelete: Restrict)
+  items   OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                  String   @id @default(uuid())
+  orderId             String   @map("order_id")
+  productId           String   @map("product_id")
+  productName         String   @map("product_name")
+  productSlug         String   @map("product_slug")
+  productSku          String   @map("product_sku")
+  productImageUrl     String?  @map("product_image_url")
+  quantity            Int
+  unitPriceInCents    Int      @map("unit_price_in_cents")
+  unitDiscountInCents Int      @map("unit_discount_in_cents")
+  subtotalInCents     Int      @map("subtotal_in_cents")
+  discountInCents     Int      @map("discount_in_cents")
+  totalInCents        Int      @map("total_in_cents")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
 }
 
 model PasswordResetToken {
@@ -182,7 +265,8 @@ model Address {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
 
   @@index([userId])
   @@index([userId, isMain])
