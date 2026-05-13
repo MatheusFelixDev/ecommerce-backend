@@ -145,6 +145,14 @@ export class CartRepository {
       },
     });
   }
+
+  async deleteById(id: string): Promise<CartItem> {
+    return prisma.cartItem.delete({
+      where: {
+        id,
+      },
+    });
+  }
 }
 
 export const cartRepository = new CartRepository();

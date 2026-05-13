@@ -4,6 +4,7 @@ import { authenticate } from '../../core/middlewares/authenticate';
 
 import { addCartItemController } from './controllers/add-cart-item.controller';
 import { listCartController } from './controllers/list-cart.controller';
+import { removeCartItemController } from './controllers/remove-cart-item.controller';
 import { updateCartItemQuantityController } from './controllers/update-cart-item-quantity.controller';
 
 export async function cartRoutes(
@@ -31,5 +32,13 @@ export async function cartRoutes(
       preHandler: [authenticate],
     },
     updateCartItemQuantityController,
+  );
+
+  app.delete(
+    '/:id',
+    {
+      preHandler: [authenticate],
+    },
+    removeCartItemController,
   );
 }
