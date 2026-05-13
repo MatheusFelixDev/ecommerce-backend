@@ -14,7 +14,60 @@ export interface CartItemWithProduct extends CartItem {
   };
 }
 
+export interface ProductWithCartRelations extends Product {
+  category: Category;
+  images: ProductImage[];
+}
+
+interface CreateCartItemData {
+  userId: string;
+  productId: string;
+  quantity: number;
+}
+
+interface UpdateCartItemQuantityData {
+  id: string;
+  quantity: number;
+}
+
 export class CartRepository {
+  async findProductById(
+    productId: string,
+  ): Promise<ProductWithCartRelations | null> {
+    return prisma.product.findUnique({
+      where: {
+        id: productId,
+      },
+      include: {
+        category: true,
+        images: {
+          orderBy: [
+            {
+              position: 'asc',
+            },
+            {
+              createdAt: 'asc',
+            },
+          ],
+        },
+      },
+    });
+  }
+
+  async findByUserIdAndProductId(params: {
+    userId: string;
+    productId: string;
+  }): Promise<CartItem | null> {
+    return prisma.cartItem.findUnique({
+      where: {
+        userId_productId: {
+          userId: params.userId,
+          productId: params.productId,
+        },
+      },
+    });
+  }
+
   async findManyByUserId(
     userId: string,
   ): Promise<CartItemWithProduct[]> {
@@ -41,6 +94,25 @@ export class CartRepository {
             },
           },
         },
+      },
+    });
+  }
+
+  async create(data: CreateCartItemData): Promise<CartItem> {
+    return prisma.cartItem.create({
+      data,
+    });
+  }
+
+  async updateQuantity(
+    data: UpdateCartItemQuantityData,
+  ): Promise<CartItem> {
+    return prisma.cartItem.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        quantity: data.quantity,
       },
     });
   }

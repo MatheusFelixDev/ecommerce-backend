@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 
 import { authenticate } from '../../core/middlewares/authenticate';
 
+import { addCartItemController } from './controllers/add-cart-item.controller';
 import { listCartController } from './controllers/list-cart.controller';
 
 export async function cartRoutes(
@@ -13,5 +14,13 @@ export async function cartRoutes(
       preHandler: [authenticate],
     },
     listCartController,
+  );
+
+  app.post(
+    '/',
+    {
+      preHandler: [authenticate],
+    },
+    addCartItemController,
   );
 }
