@@ -28,6 +28,11 @@ interface FindAddressByIdAndUserIdParams {
   userId: string;
 }
 
+interface FindOrderByIdAndUserIdParams {
+  id: string;
+  userId: string;
+}
+
 interface UpdateProductStockForOrderParams {
   productId: string;
   quantity: number;
@@ -158,6 +163,24 @@ export class OrdersRepository {
     });
 
     return result.count;
+  }
+
+  async findByIdAndUserId(
+    params: FindOrderByIdAndUserIdParams,
+  ): Promise<OrderWithItems | null> {
+    return prisma.order.findFirst({
+      where: {
+        id: params.id,
+        userId: params.userId,
+      },
+      include: {
+        items: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
   }
 
   async findManyByUserId(
