@@ -38,6 +38,11 @@ interface UpdateProductStockForOrderParams {
   quantity: number;
 }
 
+interface RestoreProductStockAfterCancelParams {
+  productId: string;
+  quantity: number;
+}
+
 interface CreateOrderItemData {
   productId: string;
   productName: string;
@@ -167,11 +172,55 @@ export class OrdersRepository {
 
   async findByIdAndUserId(
     params: FindOrderByIdAndUserIdParams,
+    tx?: Prisma.TransactionClient,
   ): Promise<OrderWithItems | null> {
-    return prisma.order.findFirst({
+    const client = tx ?? prisma;
+
+    return client.order.findFirst({
       where: {
         id: params.id,
         userId: params.userId,
+      },
+      include: {
+        items: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+  }
+
+  async restoreProductStockAfterCancel(
+    params: RestoreProductStockAfterCancelParams,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await tx.product.update({
+      where: {
+        id: params.productId,
+      },
+      data: {
+        stock: {
+          increment: params.quantity,
+        },
+        salesCount: {
+          decrement: params.quantity,
+        },
+      },
+    });
+  }
+
+  async cancelById(
+    id: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<OrderWithItems> {
+    return tx.order.update({
+      where: {
+        id,
+      },
+      data: {
+        status: 'CANCELED',
+        canceledAt: new Date(),
       },
       include: {
         items: {

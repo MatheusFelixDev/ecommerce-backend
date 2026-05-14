@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 
 import { authenticate } from '../../core/middlewares/authenticate';
 
+import { cancelOrderController } from './controllers/cancel-order.controller';
 import { createOrderController } from './controllers/create-order.controller';
 import { getOrderByIdController } from './controllers/get-order-by-id.controller';
 import { listOrdersController } from './controllers/list-orders.controller';
@@ -31,5 +32,13 @@ export async function ordersRoutes(
       preHandler: [authenticate],
     },
     getOrderByIdController,
+  );
+
+  app.patch(
+    '/:id/cancel',
+    {
+      preHandler: [authenticate],
+    },
+    cancelOrderController,
   );
 }
