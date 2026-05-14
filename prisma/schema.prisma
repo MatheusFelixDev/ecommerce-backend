@@ -35,6 +35,12 @@ enum PaymentStatus {
   CANCELED
 }
 
+enum PaymentMethod {
+  CREDIT_CARD
+  PIX
+  BOLETO
+}
+
 model User {
   id                  String               @id @default(uuid())
   name                String
@@ -93,6 +99,10 @@ model Product {
   sku             String        @unique
   priceInCents    Int           @map("price_in_cents")
   discountInCents Int           @default(0) @map("discount_in_cents")
+  weightInGrams   Int?          @map("weight_in_grams")
+  widthCm         Int?          @map("width_cm")
+  heightCm        Int?          @map("height_cm")
+  lengthCm        Int?          @map("length_cm")
   stock           Int           @default(0)
   salesCount      Int           @default(0) @map("sales_count")
   status          ProductStatus @default(ACTIVE)
@@ -152,16 +162,24 @@ model CartItem {
 }
 
 model Order {
-  id              String        @id @default(uuid())
-  userId          String        @map("user_id")
-  addressId       String        @map("address_id")
-  status          OrderStatus   @default(PENDING)
-  paymentStatus   PaymentStatus @default(PENDING) @map("payment_status")
-  itemsCount      Int           @map("items_count")
-  totalQuantity   Int           @map("total_quantity")
-  subtotalInCents Int           @map("subtotal_in_cents")
-  discountInCents Int           @map("discount_in_cents")
-  totalInCents    Int           @map("total_in_cents")
+  id                    String         @id @default(uuid())
+  userId                String         @map("user_id")
+  addressId             String         @map("address_id")
+  status                OrderStatus    @default(PENDING)
+  paymentStatus         PaymentStatus  @default(PENDING) @map("payment_status")
+  paymentMethod         PaymentMethod? @map("payment_method")
+  shippingProvider      String?        @map("shipping_provider")
+  shippingServiceCode   String?        @map("shipping_service_code")
+  shippingServiceName   String?        @map("shipping_service_name")
+  shippingPriceInCents  Int            @default(0) @map("shipping_price_in_cents")
+  shippingDeadlineDays  Int?           @map("shipping_deadline_days")
+  couponCode            String?        @map("coupon_code")
+  couponDiscountInCents Int            @default(0) @map("coupon_discount_in_cents")
+  itemsCount            Int            @map("items_count")
+  totalQuantity         Int            @map("total_quantity")
+  subtotalInCents       Int            @map("subtotal_in_cents")
+  discountInCents       Int            @map("discount_in_cents")
+  totalInCents          Int            @map("total_in_cents")
 
   addressZipCode      String  @map("address_zip_code")
   addressStreet       String  @map("address_street")
