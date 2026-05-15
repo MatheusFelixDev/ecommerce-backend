@@ -12,6 +12,9 @@ export async function createOrderController(
   const order = await createOrderService.execute({
     userId: request.user.sub,
     addressId: body.addressId,
+    shippingServiceCode: body.shippingServiceCode,
+    paymentMethod: body.paymentMethod,
+    couponCode: body.couponCode,
   });
 
   return reply.status(201).send({

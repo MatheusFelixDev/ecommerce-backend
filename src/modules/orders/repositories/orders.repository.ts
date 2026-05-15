@@ -5,6 +5,7 @@ import type {
   Order,
   OrderItem,
   OrderStatus,
+  PaymentMethod,
   Prisma,
   Product,
   ProductImage,
@@ -77,6 +78,14 @@ interface CreateOrderData {
   subtotalInCents: number;
   discountInCents: number;
   totalInCents: number;
+  paymentMethod: PaymentMethod;
+  shippingProvider: string;
+  shippingServiceCode: string;
+  shippingServiceName: string;
+  shippingPriceInCents: number;
+  shippingDeadlineDays: number;
+  couponCode?: string | null;
+  couponDiscountInCents: number;
   addressZipCode: string;
   addressStreet: string;
   addressNumber: string;
@@ -279,6 +288,14 @@ export class OrdersRepository {
         subtotalInCents: data.subtotalInCents,
         discountInCents: data.discountInCents,
         totalInCents: data.totalInCents,
+        paymentMethod: data.paymentMethod,
+        shippingProvider: data.shippingProvider,
+        shippingServiceCode: data.shippingServiceCode,
+        shippingServiceName: data.shippingServiceName,
+        shippingPriceInCents: data.shippingPriceInCents,
+        shippingDeadlineDays: data.shippingDeadlineDays,
+        couponCode: data.couponCode,
+        couponDiscountInCents: data.couponDiscountInCents,
         addressZipCode: data.addressZipCode,
         addressStreet: data.addressStreet,
         addressNumber: data.addressNumber,
