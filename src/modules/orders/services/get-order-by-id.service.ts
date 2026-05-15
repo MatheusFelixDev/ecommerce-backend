@@ -26,6 +26,7 @@ export class GetOrderByIdService {
       id: order.id,
       status: order.status,
       paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
       addressId: order.addressId,
       address: {
         zipCode: order.addressZipCode,
@@ -39,12 +40,27 @@ export class GetOrderByIdService {
         recipientName: order.recipientName,
         recipientPhone: order.recipientPhone,
       },
+      shipping: {
+        provider: order.shippingProvider,
+        serviceCode: order.shippingServiceCode,
+        serviceName: order.shippingServiceName,
+        priceInCents: order.shippingPriceInCents,
+        deadlineDays: order.shippingDeadlineDays,
+      },
+      coupon: order.couponCode
+        ? {
+            code: order.couponCode,
+            discountInCents: order.couponDiscountInCents,
+          }
+        : null,
       items: order.items,
       summary: {
         itemsCount: order.itemsCount,
         totalQuantity: order.totalQuantity,
         subtotalInCents: order.subtotalInCents,
         discountInCents: order.discountInCents,
+        shippingInCents: order.shippingPriceInCents,
+        couponDiscountInCents: order.couponDiscountInCents,
         totalInCents: order.totalInCents,
       },
       canceledAt: order.canceledAt,
