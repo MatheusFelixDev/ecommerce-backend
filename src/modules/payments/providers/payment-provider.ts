@@ -56,7 +56,17 @@ export interface GetPaymentProviderResponse {
   refundedAt: Date | null;
 }
 
+export interface ValidatePaymentWebhookSignatureProviderRequest {
+  dataId: string;
+  xSignature: string | null;
+  xRequestId: string | null;
+}
+
 export interface PaymentProvider {
+  validateWebhookSignature(
+    data: ValidatePaymentWebhookSignatureProviderRequest,
+  ): void;
+
   createPreference(
     data: CreatePaymentPreferenceProviderRequest,
   ): Promise<CreatePaymentPreferenceProviderResponse>;

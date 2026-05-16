@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from "crypto";
+
 import { env } from "../../../config/env";
 import { AppError } from "../../../core/errors/app-error";
 
@@ -9,6 +11,7 @@ import type {
   PaymentProvider,
   PaymentProviderItem,
   PaymentProviderTransactionStatus,
+  ValidatePaymentWebhookSignatureProviderRequest,
 } from "./payment-provider";
 
 interface MercadoPagoPreferenceItemPayload {
@@ -140,6 +143,70 @@ export class MercadoPagoPaymentProvider implements PaymentProvider {
     }
 
     return this.toPaymentProviderResponse(result);
+  }
+
+  validateWebhookSignature({
+    dataId,
+    xSignature,
+    xRequestId,
+  }: ValidatePaymentWebhookSignatureProviderRequest): void {
+    if (!env.mercadoPagoWebhookSecret) {
+      throw new AppError(
+        "Payment webhook secret is not configured.",
+        500,
+        "PAYMENT_WEBHOOK_SECRET_NOT_CONFIGURED",
+      );
+    }
+
+    if (!dataId || !xSignature || !xRequestId) {
+      throw new AppError(
+        "Invalid payment webhook signature.",
+        401,
+        "INVALID_WEBHOOK_SIGNATURE",
+      );
+    }
+
+    const signatureParts = xSignature
+      .split(",")
+      .map((part) => part.trim().split("="))
+      .reduce<Record<string, string>>((acc, [key, value]) => {
+        if (key && value) {
+          acc[key] = value;
+        }
+
+        return acc;
+      }, {});
+
+    const ts = signatureParts.ts;
+    const v1 = signatureParts.v1;
+
+    if (!ts || !v1) {
+      throw new AppError(
+        "Invalid payment webhook signature.",
+        401,
+        "INVALID_WEBHOOK_SIGNATURE",
+      );
+    }
+
+    const manifest = `id:${dataId.toLowerCase()};request-id:${xRequestId};ts:${ts};`;
+
+    const expectedSignature = createHmac("sha256", env.mercadoPagoWebhookSecret)
+      .update(manifest)
+      .digest("hex");
+
+    const expectedBuffer = Buffer.from(expectedSignature, "hex");
+    const receivedBuffer = Buffer.from(v1, "hex");
+
+    if (
+      expectedBuffer.length !== receivedBuffer.length ||
+      !timingSafeEqual(expectedBuffer, receivedBuffer)
+    ) {
+      throw new AppError(
+        "Invalid payment webhook signature.",
+        401,
+        "INVALID_WEBHOOK_SIGNATURE",
+      );
+    }
   }
 
   private ensureConfigured(): void {
