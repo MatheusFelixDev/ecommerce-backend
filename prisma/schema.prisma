@@ -41,6 +41,20 @@ enum PaymentMethod {
   BOLETO
 }
 
+enum PaymentProvider {
+  MERCADO_PAGO
+}
+
+enum PaymentTransactionStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  REJECTED
+  CANCELED
+  REFUNDED
+  FAILED
+}
+
 model User {
   id                  String               @id @default(uuid())
   name                String
@@ -196,9 +210,10 @@ model Order {
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
-  user    User        @relation(fields: [userId], references: [id], onDelete: Restrict)
-  address Address     @relation(fields: [addressId], references: [id], onDelete: Restrict)
-  items   OrderItem[]
+  user     User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  address  Address     @relation(fields: [addressId], references: [id], onDelete: Restrict)
+  items    OrderItem[]
+  payments Payment[]
 
   @@index([userId])
   @@index([status])
@@ -231,6 +246,37 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
   @@map("order_items")
+}
+
+model Payment {
+  id                   String                   @id @default(uuid())
+  orderId              String                   @map("order_id")
+  provider             PaymentProvider
+  providerPaymentId    String?                  @map("provider_payment_id")
+  providerPreferenceId String?                  @map("provider_preference_id")
+  method               PaymentMethod
+  status               PaymentTransactionStatus @default(PENDING)
+  amountInCents        Int                      @map("amount_in_cents")
+  currency             String                   @default("BRL")
+  paymentUrl           String?                  @map("payment_url")
+  rawStatus            String?                  @map("raw_status")
+  rawStatusDetail      String?                  @map("raw_status_detail")
+  paidAt               DateTime?                @map("paid_at")
+  failedAt             DateTime?                @map("failed_at")
+  canceledAt           DateTime?                @map("canceled_at")
+  refundedAt           DateTime?                @map("refunded_at")
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([provider])
+  @@index([providerPaymentId])
+  @@index([providerPreferenceId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payments")
 }
 
 model PasswordResetToken {
