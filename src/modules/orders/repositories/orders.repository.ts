@@ -99,6 +99,17 @@ interface CreateOrderData {
   items: CreateOrderItemData[];
 }
 
+interface UpdateOrderFulfillmentStatusData {
+  id: string;
+  status: OrderStatus;
+  trackingCode?: string | null;
+  trackingUrl?: string | null;
+  processingAt?: Date | null;
+  separatedAt?: Date | null;
+  shippedAt?: Date | null;
+  deliveredAt?: Date | null;
+}
+
 export class OrdersRepository {
   async transaction<T>(
     callback: (tx: Prisma.TransactionClient) => Promise<T>,
@@ -196,6 +207,63 @@ export class OrdersRepository {
             createdAt: 'asc',
           },
         },
+      },
+    });
+  }
+
+  async findById(
+    id: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<Order | null> {
+    const client = tx ?? prisma;
+
+    return client.order.findUnique({
+      where: {
+        id,
+      },
+    });
+  }
+
+  async updateFulfillmentStatus(
+    data: UpdateOrderFulfillmentStatusData,
+    tx: Prisma.TransactionClient,
+  ): Promise<Order> {
+    return tx.order.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        status: data.status,
+        ...(data.trackingCode !== undefined
+          ? {
+              trackingCode: data.trackingCode,
+            }
+          : {}),
+        ...(data.trackingUrl !== undefined
+          ? {
+              trackingUrl: data.trackingUrl,
+            }
+          : {}),
+        ...(data.processingAt !== undefined
+          ? {
+              processingAt: data.processingAt,
+            }
+          : {}),
+        ...(data.separatedAt !== undefined
+          ? {
+              separatedAt: data.separatedAt,
+            }
+          : {}),
+        ...(data.shippedAt !== undefined
+          ? {
+              shippedAt: data.shippedAt,
+            }
+          : {}),
+        ...(data.deliveredAt !== undefined
+          ? {
+              deliveredAt: data.deliveredAt,
+            }
+          : {}),
       },
     });
   }
