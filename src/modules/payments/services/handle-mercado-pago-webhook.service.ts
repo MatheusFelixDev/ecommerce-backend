@@ -35,7 +35,8 @@ export class HandleMercadoPagoWebhookService {
       xRequestId,
     });
 
-    const webhookType = query.type ?? body.type ?? null;
+    const webhookType =
+      query.type ?? query.topic ?? body.type ?? body.topic ?? null;
 
     if (webhookType && webhookType !== "payment") {
       return {
@@ -114,7 +115,12 @@ export class HandleMercadoPagoWebhookService {
     body: MercadoPagoWebhookBody,
     query: MercadoPagoWebhookQuery,
   ): string {
-    const dataId = query["data.id"] ?? body.data?.id;
+    const dataId =
+      query["data.id"] ??
+      query.id ??
+      body.data?.id ??
+      body.id ??
+      this.extractResourcePaymentId(body.resource);
 
     if (
       dataId === undefined ||
@@ -129,6 +135,18 @@ export class HandleMercadoPagoWebhookService {
     }
 
     return String(dataId);
+  }
+
+  private extractResourcePaymentId(
+    resource: string | undefined,
+  ): string | null {
+    if (!resource) {
+      return null;
+    }
+
+    const parts = resource.split("/").filter(Boolean);
+
+    return parts.at(-1) ?? null;
   }
 
   private toOrderPaymentStatus(

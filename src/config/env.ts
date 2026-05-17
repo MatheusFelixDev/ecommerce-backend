@@ -48,17 +48,17 @@ export const env = {
 
   mercadoPagoSuccessUrl:
     process.env.MERCADO_PAGO_SUCCESS_URL ||
-    "http://localhost:3000/payments/success",
+    "https://bladder-designate-creative.ngrok-free.dev/apipayments/success",
 
   mercadoPagoFailureUrl:
     process.env.MERCADO_PAGO_FAILURE_URL ||
-    "http://localhost:3000/payments/failure",
+    "https://bladder-designate-creative.ngrok-free.dev/api/payments/failure",
 
   mercadoPagoPendingUrl:
     process.env.MERCADO_PAGO_PENDING_URL ||
-    "http://localhost:3000/payments/pending",
+    "https://bladder-designate-creative.ngrok-free.dev/api/payments/pending",
 
   mercadoPagoNotificationUrl:
     process.env.MERCADO_PAGO_NOTIFICATION_URL ||
-    "http://localhost:3000/api/payments/webhooks/mercado-pago",
+    "https://bladder-designate-creative.ngrok-free.dev/api/payments/webhooks/mercado-pago",
 };
