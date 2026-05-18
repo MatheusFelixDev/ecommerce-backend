@@ -4,6 +4,7 @@ import { authenticate } from '../../core/middlewares/authenticate';
 import { authorize } from '../../core/middlewares/authorize';
 
 import { createStockAdjustmentController } from './controllers/create-stock-adjustment.controller';
+import { adminCancelOrderController } from './controllers/admin-cancel-order.controller';
 import { getAdminUserByIdController } from './controllers/get-admin-user-by-id.controller';
 import { getSalesReportController } from './controllers/get-sales-report.controller';
 import { getLowStockReportController } from './controllers/get-low-stock-report.controller';
@@ -16,6 +17,17 @@ import { updateAdminUserStatusController } from './controllers/update-admin-user
 export async function adminRoutes(
   app: FastifyInstance,
 ): Promise<void> {
+  app.patch(
+    '/orders/:id/cancel',
+    {
+      preHandler: [
+        authenticate,
+        authorize(['ADMIN']),
+      ],
+    },
+    adminCancelOrderController,
+  );
+
   app.get(
     '/reports/sales',
     {
