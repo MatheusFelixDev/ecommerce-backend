@@ -5,6 +5,7 @@ import { authorize } from '../../core/middlewares/authorize';
 
 import { createStockAdjustmentController } from './controllers/create-stock-adjustment.controller';
 import { getAdminUserByIdController } from './controllers/get-admin-user-by-id.controller';
+import { getSalesReportController } from './controllers/get-sales-report.controller';
 import { listAdminUsersController } from './controllers/list-admin-users.controller';
 import { listStockMovementsController } from './controllers/list-stock-movements.controller';
 import { updateAdminUserRoleController } from './controllers/update-admin-user-role.controller';
@@ -13,6 +14,17 @@ import { updateAdminUserStatusController } from './controllers/update-admin-user
 export async function adminRoutes(
   app: FastifyInstance,
 ): Promise<void> {
+  app.get(
+    '/reports/sales',
+    {
+      preHandler: [
+        authenticate,
+        authorize(['ADMIN']),
+      ],
+    },
+    getSalesReportController,
+  );
+
   app.get(
     '/users',
     {
