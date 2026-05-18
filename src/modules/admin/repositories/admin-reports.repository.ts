@@ -7,6 +7,12 @@ interface GetSalesReportParams {
   endDate: Date;
 }
 
+interface GetTopProductsReportParams {
+  startDate: Date;
+  endDate: Date;
+  limit: number;
+}
+
 export class AdminReportsRepository {
   async getSalesReport(params: GetSalesReportParams) {
     const where: Prisma.OrderWhereInput = {
@@ -43,6 +49,51 @@ export class AdminReportsRepository {
       couponDiscountInCents: result._sum.couponDiscountInCents ?? 0,
       revenueInCents: result._sum.totalInCents ?? 0,
     };
+  }
+
+  async getTopProductsReport(
+    params: GetTopProductsReportParams,
+  ) {
+    const groupedItems = await prisma.orderItem.groupBy({
+      by: [
+        'productId',
+        'productName',
+        'productSku',
+        'productSlug',
+      ],
+      where: {
+        order: {
+          paymentStatus: 'PAID',
+          createdAt: {
+            gte: params.startDate,
+            lt: params.endDate,
+          },
+        },
+      },
+      _sum: {
+        quantity: true,
+        totalInCents: true,
+      },
+      _count: {
+        id: true,
+      },
+      orderBy: {
+        _sum: {
+          quantity: 'desc',
+        },
+      },
+      take: params.limit,
+    });
+
+    return groupedItems.map((item) => ({
+      productId: item.productId,
+      productName: item.productName,
+      productSku: item.productSku,
+      productSlug: item.productSlug,
+      ordersCount: item._count.id,
+      quantitySold: item._sum.quantity ?? 0,
+      revenueInCents: item._sum.totalInCents ?? 0,
+    }));
   }
 }
 
