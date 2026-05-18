@@ -47,6 +47,14 @@ export class GetOrderByIdService {
         priceInCents: order.shippingPriceInCents,
         deadlineDays: order.shippingDeadlineDays,
       },
+      tracking: {
+        code: order.trackingCode,
+        url: order.trackingUrl,
+        processingAt: order.processingAt,
+        separatedAt: order.separatedAt,
+        shippedAt: order.shippedAt,
+        deliveredAt: order.deliveredAt,
+      },
       coupon: order.couponCode
         ? {
             code: order.couponCode,
