@@ -56,22 +56,31 @@ enum PaymentTransactionStatus {
   FAILED
 }
 
+enum StockMovementType {
+  MANUAL_ADJUSTMENT
+  ORDER_RESERVED
+  ORDER_CANCELED
+  ORDER_SHIPPED
+  RETURN
+}
+
 model User {
-  id                  String               @id @default(uuid())
+  id                  String                 @id @default(uuid())
   name                String
-  email               String               @unique
+  email               String                 @unique
   phone               String?
-  passwordHash        String               @map("password_hash")
-  role                UserRole             @default(CUSTOMER)
-  isActive            Boolean              @default(true) @map("is_active")
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
+  passwordHash        String                 @map("password_hash")
+  role                UserRole               @default(CUSTOMER)
+  isActive            Boolean                @default(true) @map("is_active")
+  createdAt           DateTime               @default(now()) @map("created_at")
+  updatedAt           DateTime               @updatedAt @map("updated_at")
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   emailChangeTokens   EmailChangeToken[]
   addresses           Address[]
   cartItems           CartItem[]
   orders              Order[]
+  stockMovements      ProductStockMovement[]
 
   @@map("users")
 }
@@ -125,10 +134,11 @@ model Product {
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
-  category   Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  images     ProductImage[]
-  cartItems  CartItem[]
-  orderItems OrderItem[]
+  category       Category               @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images         ProductImage[]
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  stockMovements ProductStockMovement[]
 
   @@index([categoryId])
   @@index([categoryId, isActive])
@@ -343,6 +353,27 @@ model Address {
   @@index([userId, isMain])
   @@index([userId, isActive])
   @@map("addresses")
+}
+
+model ProductStockMovement {
+  id             String            @id @default(uuid())
+  productId      String            @map("product_id")
+  adminUserId    String?           @map("admin_user_id")
+  type           StockMovementType
+  quantityChange Int               @map("quantity_change")
+  stockBefore    Int               @map("stock_before")
+  stockAfter     Int               @map("stock_after")
+  reason         String?
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  adminUser User?   @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([adminUserId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("product_stock_movements")
 }
 
 model HealthCheck {
