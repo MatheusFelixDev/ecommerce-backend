@@ -6,6 +6,7 @@ import { authorize } from '../../core/middlewares/authorize';
 import { createStockAdjustmentController } from './controllers/create-stock-adjustment.controller';
 import { getAdminUserByIdController } from './controllers/get-admin-user-by-id.controller';
 import { getSalesReportController } from './controllers/get-sales-report.controller';
+import { getLowStockReportController } from './controllers/get-low-stock-report.controller';
 import { getTopProductsReportController } from './controllers/get-top-products-report.controller';
 import { listAdminUsersController } from './controllers/list-admin-users.controller';
 import { listStockMovementsController } from './controllers/list-stock-movements.controller';
@@ -35,6 +36,17 @@ export async function adminRoutes(
       ],
     },
     getTopProductsReportController,
+  );
+
+  app.get(
+    '/reports/low-stock',
+    {
+      preHandler: [
+        authenticate,
+        authorize(['ADMIN']),
+      ],
+    },
+    getLowStockReportController,
   );
 
   app.get(

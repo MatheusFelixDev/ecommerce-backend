@@ -13,6 +13,12 @@ interface GetTopProductsReportParams {
   limit: number;
 }
 
+interface GetLowStockReportParams {
+  threshold: number;
+  page: number;
+  perPage: number;
+}
+
 export class AdminReportsRepository {
   async getSalesReport(params: GetSalesReportParams) {
     const where: Prisma.OrderWhereInput = {
@@ -94,6 +100,59 @@ export class AdminReportsRepository {
       quantitySold: item._sum.quantity ?? 0,
       revenueInCents: item._sum.totalInCents ?? 0,
     }));
+  }
+
+  async getLowStockReport(params: GetLowStockReportParams) {
+    const where: Prisma.ProductWhereInput = {
+      isActive: true,
+      stock: {
+        lte: params.threshold,
+      },
+    };
+
+    const skip = (params.page - 1) * params.perPage;
+
+    const [products, total] = await prisma.$transaction([
+      prisma.product.findMany({
+        where,
+        orderBy: [
+          {
+            stock: 'asc',
+          },
+          {
+            createdAt: 'desc',
+          },
+        ],
+        skip,
+        take: params.perPage,
+        include: {
+          category: true,
+        },
+      }),
+      prisma.product.count({
+        where,
+      }),
+    ]);
+
+    return {
+      products: products.map((product) => ({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        sku: product.sku,
+        stock: product.stock,
+        status: product.status,
+        isActive: product.isActive,
+        category: {
+          id: product.category.id,
+          name: product.category.name,
+          slug: product.category.slug,
+        },
+        createdAt: product.createdAt.toISOString(),
+        updatedAt: product.updatedAt.toISOString(),
+      })),
+      total,
+    };
   }
 }
 
