@@ -79,6 +79,34 @@ export class AdminUsersRepository {
       },
     });
   }
+
+  async updateStatus(
+    id: string,
+    isActive: boolean,
+  ): Promise<User> {
+    return prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        isActive,
+      },
+    });
+  }
+
+  async updateRole(
+    id: string,
+    role: UserRole,
+  ): Promise<User> {
+    return prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        role,
+      },
+    });
+  }
 }
 
 export const adminUsersRepository =

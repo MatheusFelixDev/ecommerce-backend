@@ -7,6 +7,8 @@ import { createStockAdjustmentController } from './controllers/create-stock-adju
 import { getAdminUserByIdController } from './controllers/get-admin-user-by-id.controller';
 import { listAdminUsersController } from './controllers/list-admin-users.controller';
 import { listStockMovementsController } from './controllers/list-stock-movements.controller';
+import { updateAdminUserRoleController } from './controllers/update-admin-user-role.controller';
+import { updateAdminUserStatusController } from './controllers/update-admin-user-status.controller';
 
 export async function adminRoutes(
   app: FastifyInstance,
@@ -31,6 +33,28 @@ export async function adminRoutes(
       ],
     },
     getAdminUserByIdController,
+  );
+
+  app.patch(
+    '/users/:id/status',
+    {
+      preHandler: [
+        authenticate,
+        authorize(['ADMIN']),
+      ],
+    },
+    updateAdminUserStatusController,
+  );
+
+  app.patch(
+    '/users/:id/role',
+    {
+      preHandler: [
+        authenticate,
+        authorize(['ADMIN']),
+      ],
+    },
+    updateAdminUserRoleController,
   );
 
   app.post(
