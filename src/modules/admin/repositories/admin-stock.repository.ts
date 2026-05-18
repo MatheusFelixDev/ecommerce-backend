@@ -15,6 +15,17 @@ interface CreateManualStockAdjustmentParams {
   reason: string;
 }
 
+interface ListStockMovementsParams {
+  productId: string;
+  page: number;
+  perPage: number;
+}
+
+interface ListStockMovementsResult {
+  movements: ProductStockMovement[];
+  total: number;
+}
+
 export class AdminStockRepository {
   async transaction<T>(
     callback: (tx: Prisma.TransactionClient) => Promise<T>,
@@ -63,6 +74,35 @@ export class AdminStockRepository {
         reason: params.reason,
       },
     });
+  }
+
+  async listStockMovements(
+    params: ListStockMovementsParams,
+  ): Promise<ListStockMovementsResult> {
+    const skip = (params.page - 1) * params.perPage;
+
+    const where: Prisma.ProductStockMovementWhereInput = {
+      productId: params.productId,
+    };
+
+    const [movements, total] = await prisma.$transaction([
+      prisma.productStockMovement.findMany({
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: params.perPage,
+      }),
+      prisma.productStockMovement.count({
+        where,
+      }),
+    ]);
+
+    return {
+      movements,
+      total,
+    };
   }
 }
 

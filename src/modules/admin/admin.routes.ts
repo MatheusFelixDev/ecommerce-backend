@@ -4,6 +4,7 @@ import { authenticate } from '../../core/middlewares/authenticate';
 import { authorize } from '../../core/middlewares/authorize';
 
 import { createStockAdjustmentController } from './controllers/create-stock-adjustment.controller';
+import { listStockMovementsController } from './controllers/list-stock-movements.controller';
 
 export async function adminRoutes(
   app: FastifyInstance,
@@ -17,5 +18,16 @@ export async function adminRoutes(
       ],
     },
     createStockAdjustmentController,
+  );
+
+  app.get(
+    '/products/:id/stock-movements',
+    {
+      preHandler: [
+        authenticate,
+        authorize(['ADMIN']),
+      ],
+    },
+    listStockMovementsController,
   );
 }
