@@ -12,8 +12,47 @@ on:
       - develop
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ecommerce_test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ecommerce_test_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ecommerce_test_db
+
+      JWT_SECRET: test_jwt_secret_for_ci
+      JWT_EXPIRES_IN: 1d
+
+      MELHOR_ENVIO_ENABLED: false
+      MELHOR_ENVIO_BASE_URL: https://sandbox.melhorenvio.com.br
+      MELHOR_ENVIO_ACCESS_TOKEN: ''
+      MELHOR_ENVIO_USER_AGENT: ecommerce-backend-ci (ci@example.com)
+      MELHOR_ENVIO_ORIGIN_ZIP_CODE: '00000000'
+
+      MERCADO_PAGO_ENABLED: false
+      MERCADO_PAGO_BASE_URL: https://api.mercadopago.com
+      MERCADO_PAGO_ACCESS_TOKEN: ''
+      MERCADO_PAGO_PUBLIC_KEY: ''
+      MERCADO_PAGO_WEBHOOK_SECRET: ''
+      MERCADO_PAGO_SUCCESS_URL: http://localhost:3000/payments/success
+      MERCADO_PAGO_FAILURE_URL: http://localhost:3000/payments/failure
+      MERCADO_PAGO_PENDING_URL: http://localhost:3000/payments/pending
+      MERCADO_PAGO_NOTIFICATION_URL: http://localhost:3000/api/payments/webhooks/mercado-pago
 
     strategy:
       matrix:
@@ -27,9 +66,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+
+      - name: Run lint
+        run: npm run lint
 
       - name: Build project
         run: npm run build
+
+      - name: Run tests
+        run: npm test
