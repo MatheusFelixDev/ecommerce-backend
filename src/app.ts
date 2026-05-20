@@ -4,6 +4,7 @@ import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import fastify, { type FastifyInstance } from 'fastify';
 
+import { createCorsOriginHandler } from './config/cors';
 import { env } from './config/env';
 import { loggerConfig } from './config/logger';
 import { errorHandler } from './core/middlewares/error-handler';
@@ -15,7 +16,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await app.register(cors, {
-    origin: true,
+    origin: createCorsOriginHandler(env.corsOrigins),
+    credentials: true,
   });
 
   await app.register(helmet);

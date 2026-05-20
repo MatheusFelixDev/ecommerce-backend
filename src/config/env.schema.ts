@@ -32,6 +32,8 @@ const rawEnvSchema = z.object({
     .min(1, 'is required')
     .default('1d'),
 
+  CORS_ORIGINS: trimmedStringSchema,
+
   MELHOR_ENVIO_ENABLED: booleanStringSchema,
   MELHOR_ENVIO_BASE_URL: trimmedStringSchema,
   MELHOR_ENVIO_ACCESS_TOKEN: trimmedStringSchema,
@@ -72,6 +74,30 @@ const weakJwtSecrets = new Set([
   'change_me',
   'changeme',
 ]);
+
+const defaultLocalCorsOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+] as const;
+
+function parseCorsOrigins(value: string): string[] {
+  return value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+}
+
+function isValidHttpOrigin(value: string): boolean {
+  try {
+    const parsedUrl = new URL(value);
+
+    return ['http:', 'https:'].includes(parsedUrl.protocol) &&
+      parsedUrl.origin === value;
+  } catch {
+    return false;
+  }
+}
 
 function addIssue(
   context: z.RefinementCtx,
@@ -128,6 +154,39 @@ function isUnsafeProductionUrl(value: string): boolean {
     );
   } catch {
     return false;
+  }
+}
+
+function validateCorsOrigins(
+  env: RawEnv,
+  context: z.RefinementCtx,
+): void {
+  const corsOrigins = parseCorsOrigins(env.CORS_ORIGINS);
+
+  if (env.NODE_ENV === 'production' && corsOrigins.length === 0) {
+    addIssue(context, 'CORS_ORIGINS', 'is required in production');
+    return;
+  }
+
+  for (const origin of corsOrigins) {
+    if (!isValidHttpOrigin(origin)) {
+      addIssue(context, 'CORS_ORIGINS', 'must contain valid HTTP origins only');
+      continue;
+    }
+
+    const parsedOrigin = new URL(origin);
+
+    if (env.NODE_ENV === 'production' && parsedOrigin.protocol !== 'https:') {
+      addIssue(context, 'CORS_ORIGINS', 'must use HTTPS in production');
+    }
+
+    if (env.NODE_ENV === 'production' && isUnsafeProductionUrl(origin)) {
+      addIssue(
+        context,
+        'CORS_ORIGINS',
+        'must not contain localhost, loopback or ngrok in production',
+      );
+    }
   }
 }
 
@@ -246,6 +305,7 @@ function validateMercadoPago(
 const envSchema = rawEnvSchema.superRefine((env, context) => {
   requireString(env, context, 'DATABASE_URL');
   validateJwtSecret(env, context);
+  validateCorsOrigins(env, context);
   validateProvidedUrls(env, context);
   validateMelhorEnvio(env, context);
   validateMercadoPago(env, context);
@@ -257,6 +317,7 @@ export interface Env {
   databaseUrl: string;
   jwtSecret: string;
   jwtExpiresIn: string;
+  corsOrigins: string[];
   melhorEnvioEnabled: boolean;
   melhorEnvioBaseUrl: string;
   melhorEnvioAccessToken: string;
@@ -289,6 +350,11 @@ export function loadEnv(source: NodeJS.ProcessEnv): Env {
   }
 
   const parsedEnv = result.data;
+  const corsOrigins = parseCorsOrigins(parsedEnv.CORS_ORIGINS);
+  const resolvedCorsOrigins =
+    corsOrigins.length > 0 || parsedEnv.NODE_ENV === 'production'
+      ? corsOrigins
+      : [...defaultLocalCorsOrigins];
 
   return {
     nodeEnv: parsedEnv.NODE_ENV,
@@ -296,6 +362,7 @@ export function loadEnv(source: NodeJS.ProcessEnv): Env {
     databaseUrl: parsedEnv.DATABASE_URL,
     jwtSecret: parsedEnv.JWT_SECRET,
     jwtExpiresIn: parsedEnv.JWT_EXPIRES_IN,
+    corsOrigins: resolvedCorsOrigins,
     melhorEnvioEnabled: parsedEnv.MELHOR_ENVIO_ENABLED,
     melhorEnvioBaseUrl: parsedEnv.MELHOR_ENVIO_BASE_URL,
     melhorEnvioAccessToken: parsedEnv.MELHOR_ENVIO_ACCESS_TOKEN,

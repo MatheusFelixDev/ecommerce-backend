@@ -12,6 +12,7 @@ function makeValidTestEnv(
       'postgresql://postgres:postgres@localhost:5432/ecommerce_test_db',
     JWT_SECRET: 'test_jwt_secret_with_at_least_32_chars',
     JWT_EXPIRES_IN: '1d',
+    CORS_ORIGINS: 'http://localhost:5173',
 
     MELHOR_ENVIO_ENABLED: 'false',
     MELHOR_ENVIO_BASE_URL: 'https://sandbox.melhorenvio.com.br',
@@ -47,6 +48,7 @@ function makeValidProductionEnv(
       'postgresql://postgres:postgres@db.example.com:5432/ecommerce',
     JWT_SECRET: 'production_jwt_secret_with_32_chars',
     JWT_EXPIRES_IN: '1d',
+    CORS_ORIGINS: 'https://seudominio.com',
 
     MELHOR_ENVIO_ENABLED: 'false',
     MELHOR_ENVIO_BASE_URL: 'https://www.melhorenvio.com.br',
