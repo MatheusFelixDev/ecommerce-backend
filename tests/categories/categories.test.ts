@@ -342,4 +342,127 @@ describe('Categories routes', () => {
       },
     });
   });
+  it('should not update a category without token', async () => {
+    const category = await createCategory('Games e Consoles');
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/categories/${category.id}`,
+      payload: {
+        name: 'Games Atualizados',
+      },
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('should not update a category when slug already exists', async () => {
+    const gamesCategory = await createCategory('Games e Consoles');
+    await createCategory('Acessórios');
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/categories/${gamesCategory.id}`,
+      headers: {
+        authorization: adminAuthorization,
+      },
+      payload: {
+        name: 'Acessórios',
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(409);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'CATEGORY_ALREADY_EXISTS',
+        message: 'Category already exists.',
+      },
+    });
+  });
+
+  it('should not delete a category without token', async () => {
+    const category = await createCategory('Games e Consoles');
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/api/categories/${category.id}`,
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('should not restore a category without token', async () => {
+    const category = await createCategory('Games e Consoles');
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/categories/${category.id}/restore`,
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('should not get inactive category by slug', async () => {
+    const category = await createCategory('Games e Consoles');
+
+    await app.inject({
+      method: 'DELETE',
+      url: `/api/categories/${category.id}`,
+      headers: {
+        authorization: adminAuthorization,
+      },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/categories/games-e-consoles',
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(404);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'CATEGORY_NOT_FOUND',
+        message: 'Category not found.',
+      },
+    });
+  });
+
+  it('should not delete an inactive category again', async () => {
+    const category = await createCategory('Games e Consoles');
+
+    await app.inject({
+      method: 'DELETE',
+      url: `/api/categories/${category.id}`,
+      headers: {
+        authorization: adminAuthorization,
+      },
+    });
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/api/categories/${category.id}`,
+      headers: {
+        authorization: adminAuthorization,
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(404);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'CATEGORY_NOT_FOUND',
+        message: 'Category not found.',
+      },
+    });
+  });
+
+
 });
