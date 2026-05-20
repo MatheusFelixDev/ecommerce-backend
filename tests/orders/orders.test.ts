@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   PaymentMethod,
@@ -8,6 +8,7 @@ import {
   UserRole,
 } from '../../src/generated/prisma/client';
 import { prisma } from '../../src/infra/prisma/client';
+import { melhorEnvioShippingProvider } from '../../src/modules/checkout/providers/melhor-envio-shipping.provider';
 import { buildAuthorizationHeader } from '../helpers/auth-test-helper';
 import { buildTestApp } from '../helpers/build-test-app';
 import {
@@ -42,6 +43,10 @@ describe('Orders routes', () => {
     await clearDatabase();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   afterAll(async () => {
     await app.close();
     await disconnectDatabase();
@@ -52,6 +57,31 @@ describe('Orders routes', () => {
       userId,
       role: UserRole.CUSTOMER,
     });
+  }
+
+  function adminAuthHeader(userId: string): string {
+    return buildAuthorizationHeader(app, {
+      userId,
+      role: UserRole.ADMIN,
+    });
+  }
+
+  function mockShippingOptions(): void {
+    const shippingOptions: Awaited<
+      ReturnType<typeof melhorEnvioShippingProvider.calculate>
+    > = [
+      {
+        provider: 'MELHOR_ENVIO',
+        serviceCode: '1',
+        serviceName: 'PAC',
+        priceInCents: 2000,
+        deadlineDays: 5,
+      },
+    ];
+
+    vi.spyOn(melhorEnvioShippingProvider, 'calculate').mockResolvedValue(
+      shippingOptions,
+    );
   }
 
   async function createUser(
@@ -412,6 +442,297 @@ describe('Orders routes', () => {
       error: {
         code: 'ORDER_CANNOT_BE_CANCELED',
         message: 'Order cannot be canceled.',
+      },
+    });
+  });
+
+
+  it('should create an order, debit stock, clear cart and save snapshots', async () => {
+    const user = await createUser();
+    const address = await createAddress(user.id);
+    const product = await createProduct(8);
+
+    await prisma.cartItem.create({
+      data: {
+        userId: user.id,
+        productId: product.id,
+        quantity: 2,
+      },
+    });
+
+    mockShippingOptions();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/orders',
+      headers: {
+        authorization: authHeader(user.id),
+      },
+      payload: {
+        addressId: address.id,
+        shippingServiceCode: '1',
+        paymentMethod: 'PIX',
+      },
+    });
+
+    const body = response.json();
+
+    const updatedProduct = await prisma.product.findUniqueOrThrow({
+      where: {
+        id: product.id,
+      },
+    });
+
+    const cartItemsCount = await prisma.cartItem.count({
+      where: {
+        userId: user.id,
+      },
+    });
+
+    const storedOrder = await prisma.order.findUniqueOrThrow({
+      where: {
+        id: body.data.id,
+      },
+      include: {
+        items: true,
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        status: 'PENDING',
+        paymentStatus: 'PENDING',
+        paymentMethod: 'PIX',
+        addressId: address.id,
+        coupon: null,
+        createdAt: expect.any(String),
+      }),
+    );
+
+    expect(body.data.address).toEqual({
+      zipCode: '32073000',
+      street: 'Rua Laranjal',
+      number: '123',
+      complement: 'Apto 1',
+      neighborhood: 'Industrial São Luiz',
+      city: 'Contagem',
+      state: 'MG',
+      country: 'Brazil',
+      recipientName: 'Orders Customer',
+      recipientPhone: '31999999999',
+    });
+
+    expect(body.data.shipping).toEqual({
+      provider: 'MELHOR_ENVIO',
+      serviceCode: '1',
+      serviceName: 'PAC',
+      priceInCents: 2000,
+      deadlineDays: 5,
+    });
+
+    expect(body.data.items).toHaveLength(1);
+    expect(body.data.items[0]).toEqual(
+      expect.objectContaining({
+        productId: product.id,
+        productName: 'Controle Xbox Series',
+        productSku: expect.any(String),
+        quantity: 2,
+        unitPriceInCents: 39990,
+        unitDiscountInCents: 5000,
+        subtotalInCents: 79980,
+        discountInCents: 10000,
+        totalInCents: 69980,
+      }),
+    );
+
+    expect(body.data.summary).toEqual({
+      itemsCount: 1,
+      totalQuantity: 2,
+      subtotalInCents: 79980,
+      discountInCents: 10000,
+      shippingInCents: 2000,
+      couponDiscountInCents: 0,
+      totalInCents: 71980,
+    });
+
+    expect(updatedProduct.stock).toBe(6);
+    expect(updatedProduct.salesCount).toBe(2);
+    expect(cartItemsCount).toBe(0);
+    expect(storedOrder.addressZipCode).toBe('32073000');
+    expect(storedOrder.addressStreet).toBe('Rua Laranjal');
+    expect(storedOrder.items).toHaveLength(1);
+    expect(storedOrder.items[0].productId).toBe(product.id);
+  });
+
+  it('should not create an order using another user address', async () => {
+    const user = await createUser();
+    const otherUser = await createUser('orders.address.owner@example.com');
+    const otherAddress = await createAddress(otherUser.id);
+    const product = await createProduct(8);
+
+    await prisma.cartItem.create({
+      data: {
+        userId: user.id,
+        productId: product.id,
+        quantity: 1,
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/orders',
+      headers: {
+        authorization: authHeader(user.id),
+      },
+      payload: {
+        addressId: otherAddress.id,
+        shippingServiceCode: '1',
+        paymentMethod: 'PIX',
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(404);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'ADDRESS_NOT_FOUND',
+        message: 'Address not found.',
+      },
+    });
+  });
+
+  it('should update paid order status as admin', async () => {
+    const admin = await createUser('orders.admin@example.com');
+    const user = await createUser();
+    const address = await createAddress(user.id);
+    const product = await createProduct();
+
+    const order = await createOrder({
+      userId: user.id,
+      addressId: address.id,
+      productId: product.id,
+      status: 'PAID',
+    });
+
+    await prisma.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        paymentStatus: 'PAID',
+      },
+    });
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/orders/${order.id}/status`,
+      headers: {
+        authorization: adminAuthHeader(admin.id),
+      },
+      payload: {
+        status: 'PROCESSING',
+      },
+    });
+
+    const body = response.json();
+
+    const updatedOrder = await prisma.order.findUniqueOrThrow({
+      where: {
+        id: order.id,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.id).toBe(order.id);
+    expect(body.data.status).toBe('PROCESSING');
+    expect(body.data.paymentStatus).toBe('PAID');
+    expect(body.data.tracking.processingAt).toEqual(expect.any(String));
+    expect(updatedOrder.status).toBe('PROCESSING');
+    expect(updatedOrder.processingAt).not.toBeNull();
+  });
+
+  it('should not update order status when user is customer', async () => {
+    const user = await createUser();
+    const address = await createAddress(user.id);
+    const product = await createProduct();
+
+    const order = await createOrder({
+      userId: user.id,
+      addressId: address.id,
+      productId: product.id,
+      status: 'PAID',
+    });
+
+    await prisma.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        paymentStatus: 'PAID',
+      },
+    });
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/orders/${order.id}/status`,
+      headers: {
+        authorization: authHeader(user.id),
+      },
+      payload: {
+        status: 'PROCESSING',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('should require tracking code when shipping an order', async () => {
+    const admin = await createUser('orders.shipping.admin@example.com');
+    const user = await createUser();
+    const address = await createAddress(user.id);
+    const product = await createProduct();
+
+    const order = await createOrder({
+      userId: user.id,
+      addressId: address.id,
+      productId: product.id,
+      status: 'SEPARATED',
+    });
+
+    await prisma.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        paymentStatus: 'PAID',
+      },
+    });
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/orders/${order.id}/status`,
+      headers: {
+        authorization: adminAuthHeader(admin.id),
+      },
+      payload: {
+        status: 'SHIPPED',
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(400);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'TRACKING_CODE_REQUIRED',
+        message: 'Tracking code is required to ship the order.',
       },
     });
   });
