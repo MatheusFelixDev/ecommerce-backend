@@ -601,4 +601,174 @@ describe('Products routes', () => {
       }),
     );
   });
+  it('should not create a product without token', async () => {
+    const category = await createCategory();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/products',
+      payload: {
+        categoryId: category.id,
+        name: 'Controle Xbox Series',
+        sku: 'ctrl-xbox-series',
+        priceInCents: 39990,
+        discountInCents: 5000,
+        stock: 10,
+      },
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('should not create a product when category is inactive', async () => {
+    const inactiveCategory = await prisma.category.create({
+      data: {
+        name: 'Categoria Inativa',
+        slug: 'categoria-inativa',
+        description: 'Categoria inativa para testes.',
+        isActive: false,
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/products',
+      headers: {
+        authorization: adminAuthorization,
+      },
+      payload: {
+        categoryId: inactiveCategory.id,
+        name: 'Produto Categoria Inativa',
+        sku: 'produto-categoria-inativa',
+        priceInCents: 39990,
+        discountInCents: 5000,
+        stock: 10,
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(404);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'CATEGORY_NOT_FOUND',
+        message: 'Category not found.',
+      },
+    });
+  });
+
+  it('should filter products by category slug and price range', async () => {
+    const gamesCategory = await createCategory(
+      'Games e Consoles',
+      'games-e-consoles',
+    );
+
+    const booksCategory = await createCategory(
+      'Livros',
+      'livros',
+    );
+
+    await createProduct(gamesCategory.id, {
+      name: 'Controle Xbox Series',
+      sku: 'ctrl-xbox-series',
+      priceInCents: 39990,
+    });
+
+    await createProduct(gamesCategory.id, {
+      name: 'Headset Gamer',
+      sku: 'headset-gamer',
+      priceInCents: 29990,
+    });
+
+    await createProduct(booksCategory.id, {
+      name: 'Livro Clean Code',
+      sku: 'livro-clean-code',
+      priceInCents: 45990,
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/products?categorySlug=games-e-consoles&minPriceInCents=30000&maxPriceInCents=50000',
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]).toEqual(
+      expect.objectContaining({
+        name: 'Controle Xbox Series',
+        slug: 'controle-xbox-series',
+        sku: 'CTRL-XBOX-SERIES',
+        priceInCents: 39990,
+      }),
+    );
+    expect(body.meta.total).toBe(1);
+  });
+
+  it('should not update a product with empty payload', async () => {
+    const category = await createCategory();
+    const product = await createProduct(category.id);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/products/${product.id}`,
+      headers: {
+        authorization: adminAuthorization,
+      },
+      payload: {},
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(400);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'EMPTY_UPDATE_PAYLOAD',
+        message: 'At least one field must be provided.',
+      },
+    });
+  });
+
+  it('should not update a product when discount is greater than or equal to price', async () => {
+    const category = await createCategory();
+    const product = await createProduct(category.id);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/products/${product.id}`,
+      headers: {
+        authorization: adminAuthorization,
+      },
+      payload: {
+        priceInCents: 30000,
+        discountInCents: 30000,
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(400);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'INVALID_PRODUCT_DISCOUNT',
+        message: 'Discount must be lower than product price.',
+      },
+    });
+  });
+
+  it('should not delete a product without token', async () => {
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/api/products/11111111-1111-4111-8111-111111111111',
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+
 });
