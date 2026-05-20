@@ -18,4 +18,4 @@ export const registerUserSchema = z.object({
     .string()
     .min(8, 'Password must contain at least 8 characters.')
     .max(72, 'Password must contain at most 72 characters.'),
-});
+}).strict();

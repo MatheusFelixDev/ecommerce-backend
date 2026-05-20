@@ -5,4 +5,4 @@ export const refreshTokenSchema = z.object({
     .string()
     .trim()
     .min(1, 'Refresh token is required.'),
-});
+}).strict();

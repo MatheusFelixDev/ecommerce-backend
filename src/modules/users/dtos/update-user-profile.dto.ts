@@ -10,7 +10,7 @@ export const updateUserProfileSchema = z.object({
     .max(20)
     .nullable()
     .optional(),
-});
+}).strict();
 
 export type UpdateUserProfileDto = z.infer<
   typeof updateUserProfileSchema

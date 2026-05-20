@@ -12,4 +12,4 @@ export const loginUserSchema = z.object({
     .string()
     .min(1, 'Password is required.')
     .max(72, 'Password must contain at most 72 characters.'),
-});
+}).strict();

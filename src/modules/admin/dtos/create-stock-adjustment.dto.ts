@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const createStockAdjustmentParamsSchema = z.object({
   id: z.string().uuid(),
-});
+}).strict();
 
 export const createStockAdjustmentBodySchema = z.object({
   quantityChange: z
@@ -17,7 +17,7 @@ export const createStockAdjustmentBodySchema = z.object({
     .trim()
     .min(3)
     .max(255),
-});
+}).strict();
 
 export type CreateStockAdjustmentParams = z.infer<
   typeof createStockAdjustmentParamsSchema

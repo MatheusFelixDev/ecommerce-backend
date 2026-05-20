@@ -6,7 +6,7 @@ export const getProductBySlugParamsSchema = z.object({
     .trim()
     .min(1)
     .max(180),
-});
+}).strict();
 
 export type GetProductBySlugParamsDto = z.infer<
   typeof getProductBySlugParamsSchema

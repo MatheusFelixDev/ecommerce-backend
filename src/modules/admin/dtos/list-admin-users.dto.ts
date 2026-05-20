@@ -33,7 +33,7 @@ export const listAdminUsersQuerySchema = z.object({
     .transform((value) =>
       value === undefined ? undefined : value === 'true',
     ),
-});
+}).strict();
 
 export type ListAdminUsersQuery = z.infer<
   typeof listAdminUsersQuerySchema

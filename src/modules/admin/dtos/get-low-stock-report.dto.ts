@@ -22,7 +22,7 @@ export const getLowStockReportQuerySchema = z.object({
     .max(100)
     .optional()
     .default(10),
-});
+}).strict();
 
 export type GetLowStockReportQuery = z.infer<
   typeof getLowStockReportQuerySchema

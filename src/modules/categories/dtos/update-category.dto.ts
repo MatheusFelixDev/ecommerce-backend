@@ -9,7 +9,7 @@ export const updateCategorySchema = z.object({
     .max(500)
     .nullable()
     .optional(),
-});
+}).strict();
 
 export type UpdateCategoryDto = z.infer<
   typeof updateCategorySchema

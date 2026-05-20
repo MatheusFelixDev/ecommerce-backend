@@ -18,11 +18,11 @@ const updateProductImageSchema = z.object({
   isMain: z
     .boolean()
     .optional(),
-});
+}).strict();
 
 export const updateProductParamsSchema = z.object({
   id: z.string().uuid(),
-});
+}).strict();
 
 export const updateProductBodySchema = z.object({
   categoryId: z
@@ -77,7 +77,7 @@ export const updateProductBodySchema = z.object({
     .array(updateProductImageSchema)
     .max(10)
     .optional(),
-});
+}).strict();
 
 export type UpdateProductParamsDto = z.infer<
   typeof updateProductParamsSchema

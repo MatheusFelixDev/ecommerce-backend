@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, RouteOptions } from 'fastify';
 
 import { UserRole } from '../../generated/prisma/client';
 import { authenticate } from '../../core/middlewares/authenticate';
@@ -12,13 +12,78 @@ import { refreshTokenController } from './controllers/refresh-token.controller';
 import { registerUserController } from './controllers/register-user.controller';
 import { resetPasswordController } from './controllers/reset-password.controller';
 
+type RouteRateLimitConfig = NonNullable<RouteOptions['config']>['rateLimit'];
+
+const strictAuthRateLimit: RouteRateLimitConfig = {
+  max: 10,
+  timeWindow: '1 minute',
+};
+
+const tokenAuthRateLimit: RouteRateLimitConfig = {
+  max: 30,
+  timeWindow: '1 minute',
+};
+
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/register', registerUserController);
-  app.post('/login', loginUserController);
-  app.post('/refresh', refreshTokenController);
-  app.post('/logout', logoutUserController);
-  app.post('/forgot-password', forgotPasswordController);
-  app.post('/reset-password', resetPasswordController);
+  app.post(
+    '/register',
+    {
+      config: {
+        rateLimit: strictAuthRateLimit,
+      },
+    },
+    registerUserController,
+  );
+
+  app.post(
+    '/login',
+    {
+      config: {
+        rateLimit: strictAuthRateLimit,
+      },
+    },
+    loginUserController,
+  );
+
+  app.post(
+    '/refresh',
+    {
+      config: {
+        rateLimit: tokenAuthRateLimit,
+      },
+    },
+    refreshTokenController,
+  );
+
+  app.post(
+    '/logout',
+    {
+      config: {
+        rateLimit: tokenAuthRateLimit,
+      },
+    },
+    logoutUserController,
+  );
+
+  app.post(
+    '/forgot-password',
+    {
+      config: {
+        rateLimit: strictAuthRateLimit,
+      },
+    },
+    forgotPasswordController,
+  );
+
+  app.post(
+    '/reset-password',
+    {
+      config: {
+        rateLimit: strictAuthRateLimit,
+      },
+    },
+    resetPasswordController,
+  );
 
   app.get(
     '/me',

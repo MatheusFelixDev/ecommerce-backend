@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const listStockMovementsParamsSchema = z.object({
   id: z.string().uuid(),
-});
+}).strict();
 
 export const listStockMovementsQuerySchema = z.object({
   page: z.coerce
@@ -19,7 +19,7 @@ export const listStockMovementsQuerySchema = z.object({
     .max(100)
     .optional()
     .default(10),
-});
+}).strict();
 
 export type ListStockMovementsParams = z.infer<
   typeof listStockMovementsParamsSchema

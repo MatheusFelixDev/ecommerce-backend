@@ -5,7 +5,7 @@ export const createOrderBodySchema = z.object({
   shippingServiceCode: z.string().trim().min(1),
   paymentMethod: z.enum(['CREDIT_CARD', 'PIX', 'BOLETO']),
   couponCode: z.string().trim().min(1).nullable().optional(),
-});
+}).strict();
 
 export type CreateOrderBody = z.infer<
   typeof createOrderBodySchema

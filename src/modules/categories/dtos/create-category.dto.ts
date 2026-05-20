@@ -8,7 +8,7 @@ export const createCategorySchema = z.object({
     .trim()
     .max(500)
     .optional(),
-});
+}).strict();
 
 export type CreateCategoryDto = z.infer<
   typeof createCategorySchema

@@ -28,7 +28,7 @@ export const updateAddressSchema = z.object({
   state: z.string().trim().min(2).max(50).optional(),
 
   country: z.string().trim().min(2).max(80).optional(),
-});
+}).strict();
 
 export type UpdateAddressDto = z.infer<
   typeof updateAddressSchema

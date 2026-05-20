@@ -71,7 +71,7 @@ export const listProductsSchema = z.object({
     .enum(['asc', 'desc'])
     .optional()
     .default('desc'),
-});
+}).strict();
 
 export type ListProductsDto = z.infer<
   typeof listProductsSchema

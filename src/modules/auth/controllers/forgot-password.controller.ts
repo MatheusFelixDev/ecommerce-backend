@@ -9,14 +9,13 @@ export async function forgotPasswordController(
 ): Promise<void> {
   const body = forgotPasswordSchema.parse(request.body);
 
-  const result = await forgotPasswordService.execute(body);
+  await forgotPasswordService.execute(body);
 
   reply.status(200).send({
     success: true,
     data: {
       message:
         'If the e-mail is registered, password reset instructions will be sent.',
-      resetToken: result.resetToken,
     },
   });
 }

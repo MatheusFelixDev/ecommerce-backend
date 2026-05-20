@@ -24,7 +24,7 @@ export const createAddressSchema = z.object({
   country: z.string().trim().min(2).max(80).optional(),
 
   isMain: z.boolean().optional(),
-});
+}).strict();
 
 export type CreateAddressDto = z.infer<
   typeof createAddressSchema

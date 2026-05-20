@@ -18,7 +18,7 @@ const createProductImageSchema = z.object({
   isMain: z
     .boolean()
     .optional(),
-});
+}).strict();
 
 export const createProductSchema = z.object({
   categoryId: z.string().uuid(),
@@ -70,7 +70,7 @@ export const createProductSchema = z.object({
     .max(10)
     .optional()
     .default([]),
-});
+}).strict();
 
 export type CreateProductDto = z.infer<
   typeof createProductSchema

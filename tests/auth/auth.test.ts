@@ -89,6 +89,52 @@ describe('Auth routes', () => {
     });
   });
 
+  it('should reject extra fields on register payload', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: {
+        name: 'Malicious User',
+        email: 'malicious.register@example.com',
+        password: '12345678',
+        role: 'ADMIN',
+        isActive: true,
+        passwordHash: 'fake-hash',
+      },
+    });
+
+    const body = response.json();
+
+    const storedUser = await prisma.user.findUnique({
+      where: {
+        email: 'malicious.register@example.com',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(storedUser).toBeNull();
+  });
+
+  it('should reject extra fields on refresh token payload', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      payload: {
+        refreshToken: 'invalid-refresh-token',
+        accessToken: 'fake-access-token',
+        userId: 'fake-user-id',
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
   it('should not register a user with duplicated email', async () => {
     const payload = {
       name: 'Matheus Test',
@@ -223,6 +269,30 @@ describe('Auth routes', () => {
         message: 'User is inactive.',
       },
     });
+  });
+
+  it('should not expose reset token in forgot password response', async () => {
+    const user = await createUser('forgot.password@example.com');
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: {
+        email: user.email,
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        message:
+          'If the e-mail is registered, password reset instructions will be sent.',
+      },
+    });
+    expect(body.data.resetToken).toBeUndefined();
   });
 
   it('should refresh tokens and revoke previous refresh token', async () => {
