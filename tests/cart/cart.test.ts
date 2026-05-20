@@ -453,6 +453,142 @@ describe('Cart routes', () => {
     });
   });
 
+
+  it('should not add product without token', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/cart',
+      payload: {
+        productId: '11111111-1111-4111-8111-111111111111',
+        quantity: 1,
+      },
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('should not add product when product does not exist', async () => {
+    const user = await createUser();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/cart',
+      headers: {
+        authorization: authHeader(user.id),
+      },
+      payload: {
+        productId: '11111111-1111-4111-8111-111111111111',
+        quantity: 1,
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(404);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'PRODUCT_NOT_FOUND',
+        message: 'Product not found.',
+      },
+    });
+  });
+
+  it('should not add product with invalid quantity', async () => {
+    const user = await createUser();
+    const category = await createCategory();
+    const product = await createProduct(category.id);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/cart',
+      headers: {
+        authorization: authHeader(user.id),
+      },
+      payload: {
+        productId: product.id,
+        quantity: 0,
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('should not update cart item quantity above product stock', async () => {
+    const user = await createUser();
+    const category = await createCategory();
+    const product = await createProduct(category.id, {
+      stock: 3,
+    });
+    const authorization = authHeader(user.id);
+
+    const cart = await addItem(product.id, authorization, 2);
+    const itemId = cart.items[0].id;
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/cart/${itemId}`,
+      headers: {
+        authorization,
+      },
+      payload: {
+        quantity: 4,
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(400);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'INSUFFICIENT_STOCK',
+        message: 'Insufficient product stock.',
+      },
+    });
+  });
+
+  it('should not remove cart item from another user', async () => {
+    const owner = await createUser('cart.remove.owner@example.com');
+    const anotherUser = await createUser('cart.remove.another@example.com');
+    const category = await createCategory();
+    const product = await createProduct(category.id);
+
+    const ownerAuthorization = authHeader(owner.id);
+    const anotherUserAuthorization = authHeader(anotherUser.id);
+
+    const cart = await addItem(product.id, ownerAuthorization, 2);
+    const itemId = cart.items[0].id;
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/api/cart/${itemId}`,
+      headers: {
+        authorization: anotherUserAuthorization,
+      },
+    });
+
+    const body = response.json();
+
+    expect(response.statusCode).toBe(404);
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: 'CART_ITEM_NOT_FOUND',
+        message: 'Cart item not found.',
+      },
+    });
+  });
+
+  it('should not clear cart without token', async () => {
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/api/cart',
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
   it('should clear cart', async () => {
     const user = await createUser();
     const category = await createCategory();
