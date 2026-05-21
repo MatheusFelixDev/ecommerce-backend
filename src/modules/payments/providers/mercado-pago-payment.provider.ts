@@ -40,12 +40,14 @@ interface MercadoPagoPaymentResponse {
 }
 
 export class MercadoPagoPaymentProvider implements PaymentProvider {
+  private readonly requestTimeoutMs = 10_000;
+
   async createPreference(
     data: CreatePaymentPreferenceProviderRequest,
   ): Promise<CreatePaymentPreferenceProviderResponse> {
     this.ensureConfigured();
 
-    const response = await fetch(this.buildCreatePreferenceUrl(), {
+    const response = await this.fetchWithTimeout(this.buildCreatePreferenceUrl(), {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -116,7 +118,7 @@ export class MercadoPagoPaymentProvider implements PaymentProvider {
   }: GetPaymentProviderRequest): Promise<GetPaymentProviderResponse> {
     this.ensureConfigured();
 
-    const response = await fetch(this.buildGetPaymentUrl(providerPaymentId), {
+    const response = await this.fetchWithTimeout(this.buildGetPaymentUrl(providerPaymentId), {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -231,6 +233,36 @@ export class MercadoPagoPaymentProvider implements PaymentProvider {
         500,
         "PAYMENT_PROVIDER_NOT_CONFIGURED",
       );
+    }
+  }
+
+  private async fetchWithTimeout(
+    url: string,
+    init: RequestInit,
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      this.requestTimeoutMs,
+    );
+
+    try {
+      return await fetch(url, {
+        ...init,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new AppError(
+          "Payment provider request timed out.",
+          504,
+          "PAYMENT_PROVIDER_TIMEOUT",
+        );
+      }
+
+      throw error;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 

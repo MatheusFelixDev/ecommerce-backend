@@ -31,6 +31,8 @@ interface MelhorEnvioProductPayload {
 export class MelhorEnvioShippingProvider
   implements ShippingProvider
 {
+  private readonly requestTimeoutMs = 10_000;
+
   async calculate(
     data: CalculateShippingProviderRequest,
   ): Promise<ShippingOption[]> {
@@ -40,7 +42,7 @@ export class MelhorEnvioShippingProvider
       this.toMelhorEnvioProductPayload(product),
     );
 
-    const response = await fetch(
+    const response = await this.fetchWithTimeout(
       this.buildCalculateShippingUrl(),
       {
         method: 'POST',
@@ -122,6 +124,36 @@ export class MelhorEnvioShippingProvider
     }
   }
 
+  private async fetchWithTimeout(
+    url: string,
+    init: RequestInit,
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      this.requestTimeoutMs,
+    );
+
+    try {
+      return await fetch(url, {
+        ...init,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new AppError(
+          'Shipping provider request timed out.',
+          504,
+          'SHIPPING_PROVIDER_TIMEOUT',
+        );
+      }
+
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   private buildCalculateShippingUrl(): string {
     return new URL(
       '/api/v2/me/shipment/calculate',
@@ -142,6 +174,21 @@ export class MelhorEnvioShippingProvider
         'Product shipping data is missing.',
         400,
         'PRODUCT_SHIPPING_DATA_MISSING',
+      );
+    }
+
+    if (
+      product.quantity <= 0 ||
+      product.priceInCents <= 0 ||
+      product.weightInGrams <= 0 ||
+      product.widthCm <= 0 ||
+      product.heightCm <= 0 ||
+      product.lengthCm <= 0
+    ) {
+      throw new AppError(
+        'Product shipping data is invalid.',
+        400,
+        'PRODUCT_SHIPPING_DATA_INVALID',
       );
     }
 
