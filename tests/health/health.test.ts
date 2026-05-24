@@ -1,10 +1,8 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { FastifyInstance } from "fastify";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { buildTestApp } from "../helpers/build-test-app";
 
-import { buildTestApp } from '../helpers/build-test-app';
-
-import type { FastifyInstance } from 'fastify';
-
-describe('Health routes', () => {
+describe("Health routes", () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
@@ -15,10 +13,10 @@ describe('Health routes', () => {
     await app.close();
   });
 
-  it('should return API health status', async () => {
+  it("should return API health status", async () => {
     const response = await app.inject({
-      method: 'GET',
-      url: '/api/health',
+      method: "GET",
+      url: "/api/health",
     });
 
     const body = response.json();
@@ -27,8 +25,11 @@ describe('Health routes', () => {
     expect(body).toEqual({
       success: true,
       data: {
-        status: 'ok',
-        service: 'ecommerce-backend-api',
+        status: "ok",
+        service: "ecommerce-backend-api",
+        environment: "test",
+        version: expect.any(String),
+        uptimeInSeconds: expect.any(Number),
         timestamp: expect.any(String),
       },
     });

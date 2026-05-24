@@ -1,36 +1,27 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-const trimmedStringSchema = z
-  .string()
-  .trim()
-  .default('');
+const trimmedStringSchema = z.string().trim().default("");
 
 const booleanStringSchema = z
-  .enum(['true', 'false'])
-  .default('false')
-  .transform((value) => value === 'true');
+  .enum(["true", "false"])
+  .default("false")
+  .transform((value) => value === "true");
 
 const rawEnvSchema = z.object({
   NODE_ENV: z
-    .enum(['development', 'test', 'production'])
-    .default('development'),
+    .enum(["development", "test", "production"])
+    .default("development"),
+  LOG_LEVEL: z
+    .enum(["trace", "debug", "info", "warn", "error", "fatal", "silent"])
+    .default("info"),
 
-  PORT: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(65535)
-    .default(3000),
+  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
 
   DATABASE_URL: trimmedStringSchema,
 
   JWT_SECRET: trimmedStringSchema,
 
-  JWT_EXPIRES_IN: z
-    .string()
-    .trim()
-    .min(1, 'is required')
-    .default('1d'),
+  JWT_EXPIRES_IN: z.string().trim().min(1, "is required").default("1d"),
 
   CORS_ORIGINS: trimmedStringSchema,
 
@@ -54,36 +45,36 @@ const rawEnvSchema = z.object({
 type RawEnv = z.infer<typeof rawEnvSchema>;
 
 const urlEnvKeys = [
-  'DATABASE_URL',
-  'MELHOR_ENVIO_BASE_URL',
-  'MERCADO_PAGO_BASE_URL',
-  'MERCADO_PAGO_SUCCESS_URL',
-  'MERCADO_PAGO_FAILURE_URL',
-  'MERCADO_PAGO_PENDING_URL',
-  'MERCADO_PAGO_NOTIFICATION_URL',
+  "DATABASE_URL",
+  "MELHOR_ENVIO_BASE_URL",
+  "MERCADO_PAGO_BASE_URL",
+  "MERCADO_PAGO_SUCCESS_URL",
+  "MERCADO_PAGO_FAILURE_URL",
+  "MERCADO_PAGO_PENDING_URL",
+  "MERCADO_PAGO_NOTIFICATION_URL",
 ] as const satisfies readonly (keyof RawEnv)[];
 
 const weakJwtSecrets = new Set([
-  'secret',
-  'jwt_secret',
-  'your_jwt_secret',
-  'test',
-  'test_secret',
-  'test_jwt_secret',
-  'test_jwt_secret_for_ci',
-  'change_me',
-  'changeme',
+  "secret",
+  "jwt_secret",
+  "your_jwt_secret",
+  "test",
+  "test_secret",
+  "test_jwt_secret",
+  "test_jwt_secret_for_ci",
+  "change_me",
+  "changeme",
 ]);
 
 const defaultLocalCorsOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173',
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
 ] as const;
 
 function parseCorsOrigins(value: string): string[] {
   return value
-    .split(',')
+    .split(",")
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
 }
@@ -92,8 +83,10 @@ function isValidHttpOrigin(value: string): boolean {
   try {
     const parsedUrl = new URL(value);
 
-    return ['http:', 'https:'].includes(parsedUrl.protocol) &&
-      parsedUrl.origin === value;
+    return (
+      ["http:", "https:"].includes(parsedUrl.protocol) &&
+      parsedUrl.origin === value
+    );
   } catch {
     return false;
   }
@@ -119,11 +112,11 @@ function requireString(
   env: RawEnv,
   context: z.RefinementCtx,
   key: keyof RawEnv,
-  message = 'is required',
+  message = "is required",
 ): void {
   const value = env[key];
 
-  if (typeof value === 'string' && isBlank(value)) {
+  if (typeof value === "string" && isBlank(value)) {
     addIssue(context, key, message);
   }
 }
@@ -144,88 +137,79 @@ function isUnsafeProductionUrl(value: string): boolean {
     const hostname = parsedUrl.hostname.toLowerCase();
 
     return (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '0.0.0.0' ||
-      hostname === '::1' ||
-      hostname === '[::1]' ||
-      hostname.endsWith('.localhost') ||
-      hostname.includes('ngrok')
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname === "::1" ||
+      hostname === "[::1]" ||
+      hostname.endsWith(".localhost") ||
+      hostname.includes("ngrok")
     );
   } catch {
     return false;
   }
 }
 
-function validateCorsOrigins(
-  env: RawEnv,
-  context: z.RefinementCtx,
-): void {
+function validateCorsOrigins(env: RawEnv, context: z.RefinementCtx): void {
   const corsOrigins = parseCorsOrigins(env.CORS_ORIGINS);
 
-  if (env.NODE_ENV === 'production' && corsOrigins.length === 0) {
-    addIssue(context, 'CORS_ORIGINS', 'is required in production');
+  if (env.NODE_ENV === "production" && corsOrigins.length === 0) {
+    addIssue(context, "CORS_ORIGINS", "is required in production");
     return;
   }
 
   for (const origin of corsOrigins) {
     if (!isValidHttpOrigin(origin)) {
-      addIssue(context, 'CORS_ORIGINS', 'must contain valid HTTP origins only');
+      addIssue(context, "CORS_ORIGINS", "must contain valid HTTP origins only");
       continue;
     }
 
     const parsedOrigin = new URL(origin);
 
-    if (env.NODE_ENV === 'production' && parsedOrigin.protocol !== 'https:') {
-      addIssue(context, 'CORS_ORIGINS', 'must use HTTPS in production');
+    if (env.NODE_ENV === "production" && parsedOrigin.protocol !== "https:") {
+      addIssue(context, "CORS_ORIGINS", "must use HTTPS in production");
     }
 
-    if (env.NODE_ENV === 'production' && isUnsafeProductionUrl(origin)) {
+    if (env.NODE_ENV === "production" && isUnsafeProductionUrl(origin)) {
       addIssue(
         context,
-        'CORS_ORIGINS',
-        'must not contain localhost, loopback or ngrok in production',
+        "CORS_ORIGINS",
+        "must not contain localhost, loopback or ngrok in production",
       );
     }
   }
 }
 
-function validateProvidedUrls(
-  env: RawEnv,
-  context: z.RefinementCtx,
-): void {
+function validateProvidedUrls(env: RawEnv, context: z.RefinementCtx): void {
   for (const key of urlEnvKeys) {
     const value = env[key];
 
-    if (typeof value !== 'string' || isBlank(value)) {
+    if (typeof value !== "string" || isBlank(value)) {
       continue;
     }
 
     if (!isValidUrl(value)) {
-      addIssue(context, key, 'must be a valid URL');
+      addIssue(context, key, "must be a valid URL");
       continue;
     }
 
-    if (env.NODE_ENV === 'production' && isUnsafeProductionUrl(value)) {
+    if (env.NODE_ENV === "production" && isUnsafeProductionUrl(value)) {
       addIssue(
         context,
         key,
-        'must not point to localhost, loopback or ngrok in production',
+        "must not point to localhost, loopback or ngrok in production",
       );
     }
   }
 }
 
-function validateJwtSecret(
-  env: RawEnv,
-  context: z.RefinementCtx,
-): void {
+function validateJwtSecret(env: RawEnv, context: z.RefinementCtx): void {
   if (isBlank(env.JWT_SECRET)) {
-    addIssue(context, 'JWT_SECRET', 'is required');
+    addIssue(context, "JWT_SECRET", "is required");
     return;
   }
 
-  if (env.NODE_ENV !== 'production') {
+  if (env.NODE_ENV !== "production") {
     return;
   }
 
@@ -234,32 +218,29 @@ function validateJwtSecret(
   if (env.JWT_SECRET.length < 32) {
     addIssue(
       context,
-      'JWT_SECRET',
-      'must have at least 32 characters in production',
+      "JWT_SECRET",
+      "must have at least 32 characters in production",
     );
   }
 
   if (weakJwtSecrets.has(normalizedSecret)) {
     addIssue(
       context,
-      'JWT_SECRET',
-      'must not use a weak or example value in production',
+      "JWT_SECRET",
+      "must not use a weak or example value in production",
     );
   }
 }
 
-function validateMelhorEnvio(
-  env: RawEnv,
-  context: z.RefinementCtx,
-): void {
+function validateMelhorEnvio(env: RawEnv, context: z.RefinementCtx): void {
   if (!env.MELHOR_ENVIO_ENABLED) {
     return;
   }
 
-  requireString(env, context, 'MELHOR_ENVIO_BASE_URL');
-  requireString(env, context, 'MELHOR_ENVIO_ACCESS_TOKEN');
-  requireString(env, context, 'MELHOR_ENVIO_USER_AGENT');
-  requireString(env, context, 'MELHOR_ENVIO_ORIGIN_ZIP_CODE');
+  requireString(env, context, "MELHOR_ENVIO_BASE_URL");
+  requireString(env, context, "MELHOR_ENVIO_ACCESS_TOKEN");
+  requireString(env, context, "MELHOR_ENVIO_USER_AGENT");
+  requireString(env, context, "MELHOR_ENVIO_ORIGIN_ZIP_CODE");
 
   if (
     !isBlank(env.MELHOR_ENVIO_ORIGIN_ZIP_CODE) &&
@@ -267,43 +248,40 @@ function validateMelhorEnvio(
   ) {
     addIssue(
       context,
-      'MELHOR_ENVIO_ORIGIN_ZIP_CODE',
-      'must contain exactly 8 digits',
+      "MELHOR_ENVIO_ORIGIN_ZIP_CODE",
+      "must contain exactly 8 digits",
     );
   }
 
   if (
-    env.NODE_ENV === 'production' &&
-    env.MELHOR_ENVIO_ORIGIN_ZIP_CODE === '00000000'
+    env.NODE_ENV === "production" &&
+    env.MELHOR_ENVIO_ORIGIN_ZIP_CODE === "00000000"
   ) {
     addIssue(
       context,
-      'MELHOR_ENVIO_ORIGIN_ZIP_CODE',
-      'must not use a placeholder value in production',
+      "MELHOR_ENVIO_ORIGIN_ZIP_CODE",
+      "must not use a placeholder value in production",
     );
   }
 }
 
-function validateMercadoPago(
-  env: RawEnv,
-  context: z.RefinementCtx,
-): void {
+function validateMercadoPago(env: RawEnv, context: z.RefinementCtx): void {
   if (!env.MERCADO_PAGO_ENABLED) {
     return;
   }
 
-  requireString(env, context, 'MERCADO_PAGO_BASE_URL');
-  requireString(env, context, 'MERCADO_PAGO_ACCESS_TOKEN');
-  requireString(env, context, 'MERCADO_PAGO_PUBLIC_KEY');
-  requireString(env, context, 'MERCADO_PAGO_WEBHOOK_SECRET');
-  requireString(env, context, 'MERCADO_PAGO_SUCCESS_URL');
-  requireString(env, context, 'MERCADO_PAGO_FAILURE_URL');
-  requireString(env, context, 'MERCADO_PAGO_PENDING_URL');
-  requireString(env, context, 'MERCADO_PAGO_NOTIFICATION_URL');
+  requireString(env, context, "MERCADO_PAGO_BASE_URL");
+  requireString(env, context, "MERCADO_PAGO_ACCESS_TOKEN");
+  requireString(env, context, "MERCADO_PAGO_PUBLIC_KEY");
+  requireString(env, context, "MERCADO_PAGO_WEBHOOK_SECRET");
+  requireString(env, context, "MERCADO_PAGO_SUCCESS_URL");
+  requireString(env, context, "MERCADO_PAGO_FAILURE_URL");
+  requireString(env, context, "MERCADO_PAGO_PENDING_URL");
+  requireString(env, context, "MERCADO_PAGO_NOTIFICATION_URL");
 }
 
 const envSchema = rawEnvSchema.superRefine((env, context) => {
-  requireString(env, context, 'DATABASE_URL');
+  requireString(env, context, "DATABASE_URL");
   validateJwtSecret(env, context);
   validateCorsOrigins(env, context);
   validateProvidedUrls(env, context);
@@ -312,7 +290,8 @@ const envSchema = rawEnvSchema.superRefine((env, context) => {
 });
 
 export interface Env {
-  nodeEnv: RawEnv['NODE_ENV'];
+  nodeEnv: RawEnv["NODE_ENV"];
+  logLevel: RawEnv["LOG_LEVEL"];
   port: number;
   databaseUrl: string;
   jwtSecret: string;
@@ -340,11 +319,11 @@ export function loadEnv(source: NodeJS.ProcessEnv): Env {
   if (!result.success) {
     const issues = result.error.issues
       .map((issue) => {
-        const path = issue.path.join('.') || 'ENV';
+        const path = issue.path.join(".") || "ENV";
 
         return `- ${path} ${issue.message}`;
       })
-      .join('\n');
+      .join("\n");
 
     throw new Error(`Invalid environment variables:\n${issues}`);
   }
@@ -352,12 +331,13 @@ export function loadEnv(source: NodeJS.ProcessEnv): Env {
   const parsedEnv = result.data;
   const corsOrigins = parseCorsOrigins(parsedEnv.CORS_ORIGINS);
   const resolvedCorsOrigins =
-    corsOrigins.length > 0 || parsedEnv.NODE_ENV === 'production'
+    corsOrigins.length > 0 || parsedEnv.NODE_ENV === "production"
       ? corsOrigins
       : [...defaultLocalCorsOrigins];
 
   return {
     nodeEnv: parsedEnv.NODE_ENV,
+    logLevel: parsedEnv.LOG_LEVEL,
     port: parsedEnv.PORT,
     databaseUrl: parsedEnv.DATABASE_URL,
     jwtSecret: parsedEnv.JWT_SECRET,
@@ -376,7 +356,6 @@ export function loadEnv(source: NodeJS.ProcessEnv): Env {
     mercadoPagoSuccessUrl: parsedEnv.MERCADO_PAGO_SUCCESS_URL,
     mercadoPagoFailureUrl: parsedEnv.MERCADO_PAGO_FAILURE_URL,
     mercadoPagoPendingUrl: parsedEnv.MERCADO_PAGO_PENDING_URL,
-    mercadoPagoNotificationUrl:
-      parsedEnv.MERCADO_PAGO_NOTIFICATION_URL,
+    mercadoPagoNotificationUrl: parsedEnv.MERCADO_PAGO_NOTIFICATION_URL,
   };
 }

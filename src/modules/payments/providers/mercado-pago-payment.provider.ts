@@ -47,40 +47,50 @@ export class MercadoPagoPaymentProvider implements PaymentProvider {
   ): Promise<CreatePaymentPreferenceProviderResponse> {
     this.ensureConfigured();
 
-    const response = await this.fetchWithTimeout(this.buildCreatePreferenceUrl(), {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.mercadoPagoAccessToken}`,
+    const response = await this.fetchWithTimeout(
+      this.buildCreatePreferenceUrl(),
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${env.mercadoPagoAccessToken}`,
+        },
+        body: JSON.stringify({
+          items: data.items.map((item) => this.toPreferenceItemPayload(item)),
+          payer: {
+            name: data.payer?.name ?? undefined,
+            email: data.payer?.email ?? undefined,
+          },
+          back_urls: {
+            success: env.mercadoPagoSuccessUrl,
+            failure: env.mercadoPagoFailureUrl,
+            pending: env.mercadoPagoPendingUrl,
+          },
+          notification_url: env.mercadoPagoNotificationUrl,
+          external_reference: data.orderId,
+          metadata: {
+            order_id: data.orderId,
+            payment_method: data.paymentMethod,
+            amount_in_cents: data.amountInCents,
+          },
+          auto_return: "approved",
+        }),
       },
-      body: JSON.stringify({
-        items: data.items.map((item) => this.toPreferenceItemPayload(item)),
-        payer: {
-          name: data.payer?.name ?? undefined,
-          email: data.payer?.email ?? undefined,
-        },
-        back_urls: {
-          success: env.mercadoPagoSuccessUrl,
-          failure: env.mercadoPagoFailureUrl,
-          pending: env.mercadoPagoPendingUrl,
-        },
-        notification_url: env.mercadoPagoNotificationUrl,
-        external_reference: data.orderId,
-        metadata: {
-          order_id: data.orderId,
-          payment_method: data.paymentMethod,
-          amount_in_cents: data.amountInCents,
-        },
-        auto_return: "approved",
-      }),
-    });
+    );
 
     if (!response.ok) {
       throw new AppError(
         "Payment provider preference creation failed.",
         502,
         "PAYMENT_PROVIDER_PREFERENCE_CREATION_FAILED",
+        {
+          provider: "MERCADO_PAGO",
+          operation: "create_preference",
+          orderId: data.orderId,
+          paymentMethod: data.paymentMethod,
+          externalStatusCode: response.status,
+        },
       );
     }
 
@@ -91,6 +101,11 @@ export class MercadoPagoPaymentProvider implements PaymentProvider {
         "Invalid payment provider preference response.",
         502,
         "INVALID_PAYMENT_PROVIDER_PREFERENCE_RESPONSE",
+        {
+          provider: "MERCADO_PAGO",
+          operation: "create_preference",
+          orderId: data.orderId,
+        },
       );
     }
 
@@ -118,19 +133,28 @@ export class MercadoPagoPaymentProvider implements PaymentProvider {
   }: GetPaymentProviderRequest): Promise<GetPaymentProviderResponse> {
     this.ensureConfigured();
 
-    const response = await this.fetchWithTimeout(this.buildGetPaymentUrl(providerPaymentId), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${env.mercadoPagoAccessToken}`,
+    const response = await this.fetchWithTimeout(
+      this.buildGetPaymentUrl(providerPaymentId),
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${env.mercadoPagoAccessToken}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       throw new AppError(
         "Payment provider lookup failed.",
         502,
         "PAYMENT_PROVIDER_LOOKUP_FAILED",
+        {
+          provider: "MERCADO_PAGO",
+          operation: "get_payment",
+          providerPaymentId,
+          externalStatusCode: response.status,
+        },
       );
     }
 
@@ -141,6 +165,11 @@ export class MercadoPagoPaymentProvider implements PaymentProvider {
         "Invalid payment provider lookup response.",
         502,
         "INVALID_PAYMENT_PROVIDER_LOOKUP_RESPONSE",
+        {
+          provider: "MERCADO_PAGO",
+          operation: "get_payment",
+          providerPaymentId,
+        },
       );
     }
 
@@ -241,10 +270,7 @@ export class MercadoPagoPaymentProvider implements PaymentProvider {
     init: RequestInit,
   ): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      this.requestTimeoutMs,
-    );
+    const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
 
     try {
       return await fetch(url, {

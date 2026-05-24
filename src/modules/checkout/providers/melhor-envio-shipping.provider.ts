@@ -1,12 +1,12 @@
-import { AppError } from '../../../core/errors/app-error';
-import { env } from '../../../config/env';
+import { AppError } from "../../../core/errors/app-error";
+import { env } from "../../../config/env";
 
 import type {
   CalculateShippingProviderRequest,
   ShippingOption,
   ShippingProvider,
   ShippingProviderProduct,
-} from './shipping-provider';
+} from "./shipping-provider";
 
 interface MelhorEnvioShippingResponseItem {
   id?: number | string;
@@ -28,9 +28,7 @@ interface MelhorEnvioProductPayload {
   quantity: number;
 }
 
-export class MelhorEnvioShippingProvider
-  implements ShippingProvider
-{
+export class MelhorEnvioShippingProvider implements ShippingProvider {
   private readonly requestTimeoutMs = 10_000;
 
   async calculate(
@@ -45,18 +43,16 @@ export class MelhorEnvioShippingProvider
     const response = await this.fetchWithTimeout(
       this.buildCalculateShippingUrl(),
       {
-        method: 'POST',
+        method: "POST",
         headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
+          Accept: "application/json",
+          "Content-Type": "application/json",
           Authorization: `Bearer ${env.melhorEnvioAccessToken}`,
-          'User-Agent': env.melhorEnvioUserAgent,
+          "User-Agent": env.melhorEnvioUserAgent,
         },
         body: JSON.stringify({
           from: {
-            postal_code: this.sanitizeZipCode(
-              env.melhorEnvioOriginZipCode,
-            ),
+            postal_code: this.sanitizeZipCode(env.melhorEnvioOriginZipCode),
           },
           to: {
             postal_code: this.sanitizeZipCode(data.to.zipCode),
@@ -68,20 +64,28 @@ export class MelhorEnvioShippingProvider
 
     if (!response.ok) {
       throw new AppError(
-        'Shipping calculation failed.',
+        "Shipping calculation failed.",
         502,
-        'SHIPPING_CALCULATION_FAILED',
+        "SHIPPING_CALCULATION_FAILED",
+        {
+          provider: "MELHOR_ENVIO",
+          operation: "calculate_shipping",
+          externalStatusCode: response.status,
+        },
       );
     }
 
-    const result =
-      (await response.json()) as MelhorEnvioShippingResponseItem[];
+    const result = (await response.json()) as MelhorEnvioShippingResponseItem[];
 
     if (!Array.isArray(result)) {
       throw new AppError(
-        'Invalid shipping provider response.',
+        "Invalid shipping provider response.",
         502,
-        'INVALID_SHIPPING_PROVIDER_RESPONSE',
+        "INVALID_SHIPPING_PROVIDER_RESPONSE",
+        {
+          provider: "MELHOR_ENVIO",
+          operation: "calculate_shipping",
+        },
       );
     }
 
@@ -92,9 +96,13 @@ export class MelhorEnvioShippingProvider
 
     if (options.length === 0) {
       throw new AppError(
-        'No shipping options available.',
+        "No shipping options available.",
         400,
-        'SHIPPING_OPTION_NOT_FOUND',
+        "SHIPPING_OPTION_NOT_FOUND",
+        {
+          provider: "MELHOR_ENVIO",
+          operation: "calculate_shipping",
+        },
       );
     }
 
@@ -104,9 +112,9 @@ export class MelhorEnvioShippingProvider
   private ensureConfigured(): void {
     if (!env.melhorEnvioEnabled) {
       throw new AppError(
-        'Shipping provider is disabled.',
+        "Shipping provider is disabled.",
         500,
-        'SHIPPING_PROVIDER_DISABLED',
+        "SHIPPING_PROVIDER_DISABLED",
       );
     }
 
@@ -117,9 +125,9 @@ export class MelhorEnvioShippingProvider
       !env.melhorEnvioOriginZipCode
     ) {
       throw new AppError(
-        'Shipping provider is not configured.',
+        "Shipping provider is not configured.",
         500,
-        'SHIPPING_PROVIDER_NOT_CONFIGURED',
+        "SHIPPING_PROVIDER_NOT_CONFIGURED",
       );
     }
   }
@@ -129,10 +137,7 @@ export class MelhorEnvioShippingProvider
     init: RequestInit,
   ): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      this.requestTimeoutMs,
-    );
+    const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
 
     try {
       return await fetch(url, {
@@ -140,11 +145,11 @@ export class MelhorEnvioShippingProvider
         signal: controller.signal,
       });
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === "AbortError") {
         throw new AppError(
-          'Shipping provider request timed out.',
+          "Shipping provider request timed out.",
           504,
-          'SHIPPING_PROVIDER_TIMEOUT',
+          "SHIPPING_PROVIDER_TIMEOUT",
         );
       }
 
@@ -156,7 +161,7 @@ export class MelhorEnvioShippingProvider
 
   private buildCalculateShippingUrl(): string {
     return new URL(
-      '/api/v2/me/shipment/calculate',
+      "/api/v2/me/shipment/calculate",
       env.melhorEnvioBaseUrl,
     ).toString();
   }
@@ -171,9 +176,9 @@ export class MelhorEnvioShippingProvider
       product.lengthCm === null
     ) {
       throw new AppError(
-        'Product shipping data is missing.',
+        "Product shipping data is missing.",
         400,
-        'PRODUCT_SHIPPING_DATA_MISSING',
+        "PRODUCT_SHIPPING_DATA_MISSING",
       );
     }
 
@@ -186,9 +191,9 @@ export class MelhorEnvioShippingProvider
       product.lengthCm <= 0
     ) {
       throw new AppError(
-        'Product shipping data is invalid.',
+        "Product shipping data is invalid.",
         400,
-        'PRODUCT_SHIPPING_DATA_INVALID',
+        "PRODUCT_SHIPPING_DATA_INVALID",
       );
     }
 
@@ -206,9 +211,7 @@ export class MelhorEnvioShippingProvider
   private toShippingOption(
     item: MelhorEnvioShippingResponseItem,
   ): ShippingOption | null {
-    const priceInCents = this.moneyToCents(
-      item.custom_price ?? item.price,
-    );
+    const priceInCents = this.moneyToCents(item.custom_price ?? item.price);
 
     const deadlineDays = Number(
       item.custom_delivery_time ?? item.delivery_time,
@@ -224,7 +227,7 @@ export class MelhorEnvioShippingProvider
     }
 
     return {
-      provider: 'MELHOR_ENVIO',
+      provider: "MELHOR_ENVIO",
       serviceCode: String(item.id),
       serviceName: item.name,
       priceInCents,
@@ -233,14 +236,12 @@ export class MelhorEnvioShippingProvider
   }
 
   private moneyToCents(value: unknown): number | null {
-    if (typeof value !== 'string' && typeof value !== 'number') {
+    if (typeof value !== "string" && typeof value !== "number") {
       return null;
     }
 
     const normalizedValue =
-      typeof value === 'string'
-        ? value.replace(',', '.')
-        : String(value);
+      typeof value === "string" ? value.replace(",", ".") : String(value);
 
     const parsedValue = Number(normalizedValue);
 
@@ -252,9 +253,8 @@ export class MelhorEnvioShippingProvider
   }
 
   private sanitizeZipCode(zipCode: string): string {
-    return zipCode.replace(/\D/g, '');
+    return zipCode.replace(/\D/g, "");
   }
 }
 
-export const melhorEnvioShippingProvider =
-  new MelhorEnvioShippingProvider();
+export const melhorEnvioShippingProvider = new MelhorEnvioShippingProvider();
