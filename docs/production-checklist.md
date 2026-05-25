@@ -455,3 +455,25 @@ A etapa é considerada concluída quando:
 - [ ] Documentação commitada.
 - [ ] Validações locais executadas.
 - [ ] `git status` limpo após commit.
+
+---
+
+## 16. Checklist específico do banco — 1.8J
+
+- [ ] `docs/database-production.md` revisado.
+- [ ] Banco escolhido: Azure Database for PostgreSQL Flexible Server.
+- [ ] `DATABASE_URL` de produção usa `sslmode=require`.
+- [ ] `DATABASE_URL` real está somente em secrets.
+- [ ] Usuário/senha de produção não usa `postgres/postgres`.
+- [ ] `npx prisma migrate status` revisado antes da migration.
+- [ ] `npx prisma migrate deploy` definido como comando oficial de produção.
+- [ ] `prisma db push` proibido em produção.
+- [ ] Seed de produção não cria admin com senha hardcoded.
+- [ ] Admin inicial será criado por processo manual/controlado.
+- [ ] Backup automático confirmado.
+- [ ] Retenção de backup definida.
+- [ ] Backup manual feito antes de migration crítica.
+- [ ] Restore point-in-time entendido.
+- [ ] Checklist de incidente de banco documentado.
+- [ ] Índices revisados para MVP.
+- [ ] Índices compostos futuros dependem de `EXPLAIN ANALYZE` com dados reais.
